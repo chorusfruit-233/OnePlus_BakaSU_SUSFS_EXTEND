@@ -1,3 +1,20 @@
+# USB WiFi 内建维护分支
+
+本分支 `codex/builtin-usb-wifi` 将原 `OnePlus_KSU_WIFI` 的 USB 无线网卡驱动方案整合到本仓库的内核构建中。驱动与 `cfg80211/mac80211` 等依赖以 `=y` 链接进同一个内核 Image，不再安装独立 WiFi KernelSU 模块或调用 `ksud insmod`。
+
+- 在 Actions 的 **Build and Release OnePlus Kernels (Built-in USB WiFi)** 中选择本分支。首次建议指定 `config_path=configs/oos16/OP13.json` 验证单设备，再扩大构建范围。
+- 此分支始终启用内建 USB WiFi。`profiles/usb-wifi.json` 维护驱动与依赖清单：移植原项目的 USB 驱动候选，并为 rtw88 指定实际 USB 芯片驱动。只使用对应内核树已有的代码，不引入外部驱动或跨版本移植。
+- `gki_defconfig` 生成后应用配置，经过 `olddefconfig` 再严格验证。源码中没有的候选会列出并跳过；已请求的驱动或依赖若仍为 `m/n`，以及没有任何可用驱动时，会直接停止构建。
+- 刷机包带 `_USBWiFi.zip` 后缀，包内 `usb-wifi.config.txt` 列出最终启用项和源码缺少的候选。相同信息也显示在 Actions 摘要中。
+- 勾选 `make_release` 时发布独立的 `usb-wifi-*` 预发布版本，不替换普通分支的 Latest Release。默认仍只生成构建产物。
+- 刷入该分支内核前，禁用或卸载原 `oneplus_wifi_lkm` 模块，刷入后重启。内建驱动不能用 `rmmod` 卸载，恢复普通版本需要刷回对应的普通内核。
+- 内建驱动不等于内建固件：固件仍由设备固件搜索路径提供；本分支不下载或打包固件。USB 芯片支持、OTG 供电和 Android 网络管理能力仍需真机验证。
+- 无线核心内建会改变内核配置，厂商 WiFi 模块与现有补丁的兼容性仍需验证；不要把消除独立 USB 驱动加载步骤理解为整机兼容性已经通过测试。
+
+本地回归检查：`python3 -m unittest discover -s tests -v`。同步主线时将 `main` 合并进本分支，并保留配置应用、最终验证和 USBWiFi 产物命名。以下为上游项目说明。
+
+---
+
 <div align="center">
 
 # 🔥 Huangdihd's Fork of Wild Kernels for OnePlus (Oppo/Realme)

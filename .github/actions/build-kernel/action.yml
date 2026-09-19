@@ -90,8 +90,8 @@ runs:
     - name: Get Action info
       shell: bash
       env:
-        ACTION_REPO_VAL: ${{ github.action_repository }}
-        ACTION_REF_VAL: ${{ github.action_ref }}
+        ACTION_REPO_VAL: ${{ github.repository }}
+        ACTION_REF_VAL: ${{ github.sha }}
       run: |
         set -euo pipefail
         echo "ACTION_REPO=$ACTION_REPO_VAL" >> $GITHUB_ENV
@@ -2247,7 +2247,20 @@ runs:
         esac
         
         
+        # This branch always links USB WiFi and its dependencies into Image.
+        WIFI_CONFIG_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_usb_wifi.py"
+        python3 "$WIFI_CONFIG_TOOL" apply --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config"
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" olddefconfig
+        python3 "$WIFI_CONFIG_TOOL" verify --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
+          --report "$OUT/usb-wifi.config.txt"
+        cp "$OUT/usb-wifi.config.txt" "$DEBUG_ARTIFACTS_FOLDER/usb-wifi.config.txt"
+        cat "$OUT/usb-wifi.config.txt"
+        {
+          echo '### Built-in USB WiFi'
+          echo '```text'
+          cat "$OUT/usb-wifi.config.txt"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
         
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
@@ -2478,6 +2491,7 @@ runs:
         fi
         
         cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
+        cp "$COMMON_KERNEL_FOLDER/out/usb-wifi.config.txt" "$AK3_FOLDER/usb-wifi.config.txt"
         
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
@@ -2492,6 +2506,7 @@ runs:
         fi
         mkdir -p "$ARTIFACTS_FOLDER"
         
+        ZIP_NAME="${ZIP_NAME%.zip}_USBWiFi.zip"
         echo "Creating flashable ZIP: $ZIP_NAME"
         
         if ! zip -r9 "$ZIP_NAME" ./* \
@@ -2553,6 +2568,7 @@ runs:
           echo "Clean Build: ${{ inputs.clean }}"
           echo ""
           echo "=== OnePlus Features ==="
+          echo "USB WiFi: built-in (see usb-wifi.config.txt in ZIP)"
           echo "BBR: ${{ env.OP_BBR }}"
           echo "BBG: ${{ env.OP_BBG }}"
           echo "HMBIRD SCX: ${{ env.OP_HMBIRD }}"
@@ -2619,6 +2635,7 @@ runs:
           echo ""
           echo "| Feature | Status |"
           echo "|---------|--------|"
+          echo "| **USB WiFi** | Built-in; config report included in ZIP |"
           echo "| **BBR** | ${{ env.OP_BBR }} |"
           echo "| **BBG** | ${{ env.OP_BBG }} |"
           echo "| **HMBIRD SCX** | ${{ env.OP_HMBIRD }} |"

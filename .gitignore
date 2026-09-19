@@ -4,3 +4,5 @@ GEMINI.md
 opencode.json
 .github/opencode/conflict_files.txt
 .github/opencode/conflict_summary.txt
+__pycache__/
+*.py[cod]
