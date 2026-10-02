@@ -875,7 +875,7 @@ jobs:
       - name: 🏷️ Generate and Create New Tag
         run: |
           set -euo pipefail
-          # Independent release namespace for this maintained feature branch.
+          # Independent release namespace for built-in USB WiFi builds.
           NEW_TAG="usb-wifi-${SUSFS_BASE_VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_ENV"
           git tag "$NEW_TAG" "$GITHUB_SHA"

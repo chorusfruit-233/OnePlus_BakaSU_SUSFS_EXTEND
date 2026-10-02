@@ -2247,7 +2247,7 @@ runs:
         esac
         
         
-        # This branch always links USB WiFi and its dependencies into Image.
+        # Always link USB WiFi and its dependencies into Image.
         WIFI_CONFIG_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_usb_wifi.py"
         python3 "$WIFI_CONFIG_TOOL" apply --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config"
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" olddefconfig

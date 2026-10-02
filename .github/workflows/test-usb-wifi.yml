@@ -1,7 +1,7 @@
 name: Validate built-in USB WiFi integration
 on:
   push:
-    branches: [codex/builtin-usb-wifi]
+    branches: [main]
     paths: ['scripts/builtin_usb_wifi.py', 'profiles/usb-wifi.json', 'tests/**', '.github/workflows/test-usb-wifi.yml']
   pull_request:
     paths: ['scripts/builtin_usb_wifi.py', 'profiles/usb-wifi.json', 'tests/**', '.github/workflows/test-usb-wifi.yml']
