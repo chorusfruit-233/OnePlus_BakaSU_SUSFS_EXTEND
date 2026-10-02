@@ -234,6 +234,34 @@ config SECOND_USB
         self.assertEqual([driver['symbol'] for driver in plan['selected']], ['GOOD_USB'])
         self.assertEqual(plan['drivers'][1]['status'], 'blocked')
 
+    def test_vendor_unclosed_source_quote_matches_native_linux(self):
+        for quote in ('"', "'"):
+            with self.subTest(quote=quote):
+                included = self.root / 'camera/Kconfig'
+                included.parent.mkdir(exist_ok=True)
+                included.write_text('config VENDOR_CAMERA\n    bool "camera"\n    default y\n')
+                original = self.kconfig.read_text()
+                self.kconfig.write_text(original + f'\nsource {quote}camera/Kconfig\n')
+                config_before = self.kconfig.read_text()
+                plan = self.apply()
+                self.assertEqual(self.kconfig.read_text(), config_before)
+                self.assertEqual(wifi.load_kconfig(self.root, self.config).syms['VENDOR_CAMERA'].str_value, 'y')
+                self.assertEqual(len(plan['kconfig_compatibility']), 1)
+                self.assertIn('unclosed source quote', plan['kconfig_compatibility'][0])
+                self.kconfig.write_text(original)
+
+    def test_other_unclosed_strings_still_fail(self):
+        with self.kconfig.open('a') as handle:
+            handle.write('\nconfig BAD_STRING\n    string "unfinished prompt\n')
+        with self.assertRaisesRegex(SystemExit, 'unterminated string'):
+            self.apply()
+
+    def test_unclosed_source_does_not_skip_missing_include(self):
+        with self.kconfig.open('a') as handle:
+            handle.write('\nsource "missing/Kconfig\n')
+        with self.assertRaisesRegex(SystemExit, 'missing/Kconfig.*not found'):
+            self.apply()
+
     def test_new_usb_family_preserves_disabled_other_transports(self):
         with self.kconfig.open('a') as handle:
             handle.write('''

@@ -31,14 +31,25 @@ DEPENDENCY_PATHS = ('drivers/net/wireless/', 'drivers/staging/rtl',
 
 
 class LinuxKconfig(kc.Kconfig):
-    """Normalize modern Linux's spelling of the modules property.
+    """Match native Linux syntax that Kconfiglib 14.1 does not accept.
 
     Kconfiglib 14.1 predates Linux's removal of the 'option' prefix. Both
     spellings have identical semantics; kernel source files stay untouched.
+    Linux also terminates an unclosed quoted source path at newline with a
+    warning. Some MediaTek camera Kconfigs rely on this behavior.
     """
+    def __init__(self, *args, **kwargs):
+        self.compatibility_notes = []
+        super().__init__(*args, **kwargs)
+
     def _tokenize(self, line):
         if re.fullmatch(r'\s*modules\s*(?:#[^\n]*)?\s*', line):
             line = re.sub(r'\bmodules\b', 'option modules', line, count=1)
+        match = re.fullmatch(r'''(\s*(?:source|rsource|osource|orsource)\s+)(["'])([^"'\\\r\n]+)(\r?\n)?''', line)
+        if match:
+            self.compatibility_notes.append(
+                f'{self.filename}:{self.linenr}: unclosed source quote terminated at end of line (native Linux semantics)')
+            line = ''.join(match.group(index) for index in (1, 2, 3, 2)) + (match[4] or '')
         return super()._tokenize(line)
 
 
@@ -297,6 +308,7 @@ class DriverPlanner:
         return {'schema': 2, 'model': model, 'kernel': version,
                 'required': self.profile['required'], 'drivers': results,
                 'selected': self.selected, 'assignments': values,
+                'kconfig_compatibility': self.kconf.compatibility_notes,
                 'preserved_disabled': sorted(self.preserved)}
 
 
@@ -304,6 +316,8 @@ def apply_plan(source, config, profile, plan_path, model='', version=''):
     plan = DriverPlanner(load_kconfig(source, config), profile).resolve(model, version or kernel_version(source))
     update_config(config, plan['assignments'])
     write_json(plan_path, plan)
+    for note in plan['kconfig_compatibility']:
+        print('USB WiFi Kconfig compatibility: ' + note)
     print(f'USB WiFi: {len(plan["selected"])} driver candidates configured as built-ins for {plan["model"] or "this kernel"}')
     return plan
 
@@ -446,6 +460,8 @@ def verify(source, config, plan_path, metadata_dir, report, image=None):
              f'Firmware coverage: {manifest["status"]}',
              'Firmware source: ' + manifest['source']['repository'],
              'Firmware revision: ' + manifest['source']['revision'], '', 'Drivers:']
+    if plan.get('kconfig_compatibility'):
+        lines[-1:-1] = ['Kconfig compatibility:'] + plan['kconfig_compatibility'] + ['']
     for item in plan['drivers']:
         lines.append(f'CONFIG_{item["symbol"]}: {item["status"]}' + (f' — {item["reason"]}' if item['reason'] else ''))
         if item.get('notes'):
