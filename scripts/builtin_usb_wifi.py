@@ -269,6 +269,8 @@ class DriverPlanner:
         for name, value in self.abi_preserved.items():
             symbol = self.kconf.syms[name]
             if symbol.str_value != value:
+                if value == 'y' and not self._satisfy(symbol.direct_dep, (symbol,)):
+                    raise ValueError(f'cannot preserve wireless ABI CONFIG_{name}={value}')
                 symbol.set_value(value)
             if symbol.str_value != value:
                 raise ValueError(f'cannot preserve wireless ABI CONFIG_{name}={value}')

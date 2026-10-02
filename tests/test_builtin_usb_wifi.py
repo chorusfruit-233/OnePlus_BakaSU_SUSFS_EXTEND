@@ -227,6 +227,11 @@ config NL80211_TESTMODE
     depends on CFG80211
 ''')
         self.profile['preserve_abi'].append('NL80211_TESTMODE')
+        # Production GKI profiles resolve CFG80211/MAC80211 as dependencies,
+        # rather than enabling them in the initial required-symbol pass.
+        self.profile['required'] = [name for name in self.profile['required']
+                                    if name not in ('CFG80211', 'MAC80211')]
+        self.profile['helpers'].extend(['CFG80211', 'MAC80211'])
 
     def test_factory_reference_restores_option_hidden_by_disabled_gki_core(self):
         self.add_testmode_fixture()
