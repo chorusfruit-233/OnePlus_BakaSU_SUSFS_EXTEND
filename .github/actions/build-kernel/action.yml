@@ -105,6 +105,24 @@ runs:
         path: action-source
         fetch-depth: 1
 
+    - name: Install USB WiFi Kconfig dependency resolver
+      shell: bash
+      run: |
+        set -euo pipefail
+        USB_WIFI_PYTHON_DEPS="$RUNNER_TEMP/usb-wifi-python"
+        python3 -m pip install --disable-pip-version-check \
+          --target "$USB_WIFI_PYTHON_DEPS" \
+          -r "$GITHUB_WORKSPACE/action-source/scripts/requirements-usb-wifi.txt"
+        printf 'USB_WIFI_PYTHON=%s\n' "$(command -v python3)" >> "$GITHUB_ENV"
+        printf 'USB_WIFI_PYTHON_DEPS=%s\n' "$USB_WIFI_PYTHON_DEPS" >> "$GITHUB_ENV"
+        printf 'PYTHONPATH=%s\n' "$USB_WIFI_PYTHON_DEPS${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
+
+    - name: Cache pinned USB WiFi firmware objects
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/usb-wifi-firmware-cache
+        key: usb-wifi-firmware-v1-${{ runner.os }}-${{ hashFiles('action-source/profiles/usb-wifi-firmware.json') }}
+
     - name: Parse op_config_json
       shell: bash
       run: |
@@ -2247,20 +2265,35 @@ runs:
         esac
         
         
-        # Always link USB WiFi and its dependencies into Image.
+        # Resolve candidates against this device's Kconfig, then embed the
+        # firmware needed by the drivers that olddefconfig actually retained.
         WIFI_CONFIG_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_usb_wifi.py"
-        python3 "$WIFI_CONFIG_TOOL" apply --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config"
+        export PYTHONPATH="$USB_WIFI_PYTHON_DEPS${PYTHONPATH:+:$PYTHONPATH}"
+        mkdir -p "$OUT/usb-wifi"
+        preserve_usb_wifi_metadata() {
+          local wifi_exit_status=$?
+          if [ -d "$OUT/usb-wifi" ]; then
+            cp -a "$OUT/usb-wifi" "$DEBUG_ARTIFACTS_FOLDER/" || true
+          fi
+          if [ -f "$OUT/usb-wifi.config.txt" ]; then
+            cp "$OUT/usb-wifi.config.txt" "$DEBUG_ARTIFACTS_FOLDER/usb-wifi.config.txt" || true
+          fi
+          exit "$wifi_exit_status"
+        }
+        trap preserve_usb_wifi_metadata EXIT
+        "$USB_WIFI_PYTHON" "$WIFI_CONFIG_TOOL" apply \
+          --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
+          --plan "$OUT/usb-wifi/plan.json" --model "$OP_MODEL" --kernel "$KERNEL_FULL_VER"
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" olddefconfig
-        python3 "$WIFI_CONFIG_TOOL" verify --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
+        "$USB_WIFI_PYTHON" "$WIFI_CONFIG_TOOL" firmware \
+          --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
+          --plan "$OUT/usb-wifi/plan.json" --firmware-dir "$OUT/usb-wifi-firmware" \
+          --metadata-dir "$OUT/usb-wifi" --cache-dir "$RUNNER_TEMP/usb-wifi-firmware-cache"
+        make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" olddefconfig
+        "$USB_WIFI_PYTHON" "$WIFI_CONFIG_TOOL" verify \
+          --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
+          --plan "$OUT/usb-wifi/plan.json" --metadata-dir "$OUT/usb-wifi" \
           --report "$OUT/usb-wifi.config.txt"
-        cp "$OUT/usb-wifi.config.txt" "$DEBUG_ARTIFACTS_FOLDER/usb-wifi.config.txt"
-        cat "$OUT/usb-wifi.config.txt"
-        {
-          echo '### Built-in USB WiFi'
-          echo '```text'
-          cat "$OUT/usb-wifi.config.txt"
-          echo '```'
-        } >> "$GITHUB_STEP_SUMMARY"
         
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
@@ -2326,6 +2359,21 @@ runs:
           echo "::endgroup::"
           exit 1
         fi
+
+        # Audit the final configuration and the firmware linked into this Image.
+        "$USB_WIFI_PYTHON" "$WIFI_CONFIG_TOOL" verify \
+          --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
+          --plan "$OUT/usb-wifi/plan.json" --metadata-dir "$OUT/usb-wifi" \
+          --report "$OUT/usb-wifi.config.txt" --image "$IMG"
+        cp -a "$OUT/usb-wifi" "$DEBUG_ARTIFACTS_FOLDER/"
+        cp "$OUT/usb-wifi.config.txt" "$DEBUG_ARTIFACTS_FOLDER/usb-wifi.config.txt"
+        cat "$OUT/usb-wifi.config.txt"
+        {
+          echo '### Built-in USB WiFi drivers and firmware'
+          echo '```text'
+          cat "$OUT/usb-wifi.config.txt"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
         IMG_SIZE=$(stat -c%s "$IMG")
         
@@ -2419,13 +2467,8 @@ runs:
       run: |
         set -euo pipefail
         echo "::group::Collect Build stats"
+        # Use the make output audited above as the sole release artifact.
         IMG="$COMMON_KERNEL_FOLDER/out/arch/arm64/boot/Image"
-        
-        if [ -f "$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image" ]; then
-          IMG="$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image"
-        elif [ -f "$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image" ]; then
-          IMG="$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image"
-        fi
         
         if [ -f "$COMMON_KERNEL_FOLDER/build.log" ]; then
           WARNINGS_COUNT="$(grep -ciE '\bwarning:' "$COMMON_KERNEL_FOLDER/build.log" || true)"
@@ -2477,13 +2520,8 @@ runs:
         set -euo pipefail
         echo "::group::Create kernel ZIP package"
         
+        # Package the same Image whose built-in firmware was verified.
         IMAGE_PATH="$COMMON_KERNEL_FOLDER/out/arch/arm64/boot/Image"
-        
-        if [ -f "$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image" ]; then
-          IMAGE_PATH="$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image"
-        elif [ -f "$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image" ]; then
-          IMAGE_PATH="$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image"
-        fi
         
         if [ ! -f "$IMAGE_PATH" ]; then
           echo "::error::Built Image not found at: $IMAGE_PATH"
@@ -2492,6 +2530,7 @@ runs:
         
         cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
         cp "$COMMON_KERNEL_FOLDER/out/usb-wifi.config.txt" "$AK3_FOLDER/usb-wifi.config.txt"
+        cp -a "$COMMON_KERNEL_FOLDER/out/usb-wifi" "$AK3_FOLDER/"
         
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
@@ -2568,7 +2607,7 @@ runs:
           echo "Clean Build: ${{ inputs.clean }}"
           echo ""
           echo "=== OnePlus Features ==="
-          echo "USB WiFi: built-in (see usb-wifi.config.txt in ZIP)"
+          echo "USB WiFi: per-device built-in drivers and firmware (coverage in usb-wifi.config.txt; sources/licenses in usb-wifi/)"
           echo "BBR: ${{ env.OP_BBR }}"
           echo "BBG: ${{ env.OP_BBG }}"
           echo "HMBIRD SCX: ${{ env.OP_HMBIRD }}"
@@ -2635,7 +2674,7 @@ runs:
           echo ""
           echo "| Feature | Status |"
           echo "|---------|--------|"
-          echo "| **USB WiFi** | Built-in; config report included in ZIP |"
+          echo "| **USB WiFi** | Per-device built-in drivers and firmware; coverage, sources and licenses included in ZIP |"
           echo "| **BBR** | ${{ env.OP_BBR }} |"
           echo "| **BBG** | ${{ env.OP_BBG }} |"
           echo "| **HMBIRD SCX** | ${{ env.OP_HMBIRD }} |"

@@ -1,16 +1,664 @@
 {
-  "source": "OnePlus_KSU_WIFI/profiles/wifi-drivers.json (usb-wifi)",
-  "required": ["NET", "NETDEVICES", "USB", "WLAN", "CFG80211", "MAC80211", "FW_LOADER"],
+  "source": "Native USB WLAN Kconfig and firmware metadata from torvalds/linux v5.10, v5.15, v6.1, v6.6, v6.12 and master; symbols absent from each device source are reported, not backported.",
+  "required": [
+    "NET",
+    "NETDEVICES",
+    "USB_SUPPORT",
+    "USB",
+    "WLAN",
+    "FW_LOADER"
+  ],
   "helpers": [
-    "CRYPTO", "RFKILL", "NEW_LEDS", "LEDS_CLASS",
-    "WLAN_VENDOR_REALTEK", "WLAN_VENDOR_ATH", "WLAN_VENDOR_MEDIATEK",
-    "WLAN_VENDOR_RALINK", "WLAN_VENDOR_INTERSIL", "WLAN_VENDOR_ZYDAS",
-    "RTL_CARDS", "RT2X00", "ATH6KL", "P54_COMMON", "RTW88", "RTW89"
+    "WIRELESS",
+    "CFG80211",
+    "MAC80211",
+    "CRYPTO",
+    "RFKILL",
+    "NEW_LEDS",
+    "LEDS_CLASS"
   ],
   "drivers": [
-    "RTL8XXXU", "RTL8192CU", "ATH9K_HTC", "CARL9170", "RT2800USB",
-    "MT7601U", "MT76x0U", "MT76x2U", "MT7921U", "RTW89_8852AU",
-    "RTL8187", "ZD1211RW", "P54_USB", "RT2500USB", "RT73USB", "ATH6KL_USB",
-    "RTW88_8822BU", "RTW88_8822CU", "RTW88_8723DU", "RTW88_8821CU"
+    {
+      "symbol": "RTL8XXXU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtl8xxxu"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTL8XXXU_UNTESTED"
+      ]
+    },
+    {
+      "symbol": "RTL8192CU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtlwifi/rtl8192cu"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTL_CARDS"
+      ]
+    },
+    {
+      "symbol": "RTL8192DU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtlwifi/rtl8192du"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTL_CARDS"
+      ]
+    },
+    {
+      "symbol": "RTL8187",
+      "sources": [
+        "drivers/net/wireless/realtek/rtl818x/rtl8187"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK"
+      ]
+    },
+    {
+      "symbol": "RTW88_8822BU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8822b.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8822bu.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8822b_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW88_8822CU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8822c.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8822cu.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8822c_fw.bin",
+        "rtw88/rtw8822c_wow_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW88_8723DU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8723d.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8723du.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8723d_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW88_8821CU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8821c.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8821cu.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8821c_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW88_8821AU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8821a.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8821au.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8821a_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW88_8812AU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8812a.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8812au.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8812a_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW88_8814AU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw88/rtw8814a.c",
+        "drivers/net/wireless/realtek/rtw88/rtw8814au.c",
+        "drivers/net/wireless/realtek/rtw88/usb.c"
+      ],
+      "firmware": [
+        "rtw88/rtw8814a_fw.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW88"
+      ]
+    },
+    {
+      "symbol": "RTW89_8851BU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw89/rtw8851b.c",
+        "drivers/net/wireless/realtek/rtw89/rtw8851bu.c",
+        "drivers/net/wireless/realtek/rtw89/usb.c"
+      ],
+      "firmware": [
+        "rtw89/rtw8851b_fw*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW89"
+      ]
+    },
+    {
+      "symbol": "RTW89_8852AU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw89/rtw8852a.c",
+        "drivers/net/wireless/realtek/rtw89/rtw8852au.c",
+        "drivers/net/wireless/realtek/rtw89/usb.c"
+      ],
+      "firmware": [
+        "rtw89/rtw8852a_fw*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW89"
+      ]
+    },
+    {
+      "symbol": "RTW89_8852BU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw89/rtw8852b.c",
+        "drivers/net/wireless/realtek/rtw89/rtw8852bu.c",
+        "drivers/net/wireless/realtek/rtw89/usb.c"
+      ],
+      "firmware": [
+        "rtw89/rtw8852b_fw*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW89"
+      ]
+    },
+    {
+      "symbol": "RTW89_8852CU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw89/rtw8852c.c",
+        "drivers/net/wireless/realtek/rtw89/rtw8852cu.c",
+        "drivers/net/wireless/realtek/rtw89/usb.c"
+      ],
+      "firmware": [
+        "rtw89/rtw8852c_fw*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW89"
+      ]
+    },
+    {
+      "symbol": "RTW89_8922AU",
+      "sources": [
+        "drivers/net/wireless/realtek/rtw89/rtw8922a.c",
+        "drivers/net/wireless/realtek/rtw89/rtw8922au.c",
+        "drivers/net/wireless/realtek/rtw89/usb.c"
+      ],
+      "firmware": [
+        "rtw89/rtw8922a_fw*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_REALTEK",
+        "RTW89"
+      ]
+    },
+    {
+      "symbol": "ATH9K_HTC",
+      "sources": [
+        "drivers/net/wireless/ath/ath9k/hif_usb.c",
+        "drivers/net/wireless/ath/ath9k/hif_usb.h"
+      ],
+      "firmware": [
+        "ath9k_htc/htc_7010-*.fw",
+        "ath9k_htc/htc_9271-*.fw",
+        "htc_7010.fw",
+        "htc_9271.fw"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ATH"
+      ]
+    },
+    {
+      "symbol": "CARL9170",
+      "sources": [
+        "drivers/net/wireless/ath/carl9170"
+      ],
+      "firmware": [
+        "carl9170-1.fw"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ATH"
+      ]
+    },
+    {
+      "symbol": "ATH6KL_USB",
+      "sources": [
+        "drivers/net/wireless/ath/ath6kl/usb.c",
+        "drivers/net/wireless/ath/ath6kl/core.h"
+      ],
+      "firmware": [
+        "ath6k/AR6004/hw*/*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ATH",
+        "ATH6KL"
+      ],
+      "notes": "AR6004 USB only. Runtime loading joins the hardware directory and firmware basename; AR6003 SDIO firmware is intentionally excluded.",
+      "preserve_disabled": [
+        "ATH6KL_SDIO"
+      ]
+    },
+    {
+      "symbol": "ATH10K_USB",
+      "sources": [
+        "drivers/net/wireless/ath/ath10k/usb.c"
+      ],
+      "firmware": [
+        "ath10k/QCA9377/hw1.0/firmware-usb-*.bin",
+        "ath10k/QCA9377/hw1.0/board*.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ATH",
+        "ATH10K"
+      ],
+      "notes": "Upstream describes this USB transport as experimental, work in progress and not fully functional. QCA9377 USB requires firmware-usb-N.bin, not PCIe or SDIO firmware.",
+      "preserve_disabled": [
+        "ATH10K_PCI",
+        "ATH10K_AHB",
+        "ATH10K_SDIO",
+        "ATH10K_SNOC"
+      ]
+    },
+    {
+      "symbol": "AR5523",
+      "sources": [
+        "drivers/net/wireless/ath/ar5523"
+      ],
+      "firmware": [
+        "ar5523.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ATH"
+      ]
+    },
+    {
+      "symbol": "RT2500USB",
+      "sources": [
+        "drivers/net/wireless/ralink/rt2x00/rt2500usb.c"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_RALINK",
+        "RT2X00"
+      ]
+    },
+    {
+      "symbol": "RT73USB",
+      "sources": [
+        "drivers/net/wireless/ralink/rt2x00/rt73usb.c"
+      ],
+      "firmware": [
+        "rt73.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_RALINK",
+        "RT2X00"
+      ]
+    },
+    {
+      "symbol": "RT2800USB",
+      "sources": [
+        "drivers/net/wireless/ralink/rt2x00/rt2800usb.c"
+      ],
+      "firmware": [
+        "rt2870.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_RALINK",
+        "RT2X00",
+        "RT2800USB_RT33XX",
+        "RT2800USB_RT35XX",
+        "RT2800USB_RT3573",
+        "RT2800USB_RT53XX",
+        "RT2800USB_RT55XX",
+        "RT2800USB_UNKNOWN"
+      ]
+    },
+    {
+      "symbol": "MT7601U",
+      "sources": [
+        "drivers/net/wireless/mediatek/mt7601u"
+      ],
+      "firmware": [
+        "mt7601u.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_MEDIATEK"
+      ]
+    },
+    {
+      "symbol": "MT76x0U",
+      "sources": [
+        "drivers/net/wireless/mediatek/mt76/mt76x0/usb.c",
+        "drivers/net/wireless/mediatek/mt76/mt76x0/usb_mcu.c",
+        "drivers/net/wireless/mediatek/mt76/mt76x0/mt76x0.h"
+      ],
+      "firmware": [
+        "mediatek/mt7610e.bin",
+        "mediatek/mt7610u.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_MEDIATEK"
+      ],
+      "notes": "USB firmware loader tries mt7610e.bin first and falls back to mt7610u.bin; both filenames are used by the USB driver."
+    },
+    {
+      "symbol": "MT76x2U",
+      "sources": [
+        "drivers/net/wireless/mediatek/mt76/mt76x2/usb.c",
+        "drivers/net/wireless/mediatek/mt76/mt76x2/usb_mcu.c"
+      ],
+      "firmware": [
+        "mt7662.bin",
+        "mt7662_rom_patch.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_MEDIATEK"
+      ]
+    },
+    {
+      "symbol": "MT7921U",
+      "sources": [
+        "drivers/net/wireless/mediatek/mt76/mt7921/usb.c",
+        "drivers/net/wireless/mediatek/mt76/mt7921/mcu.c"
+      ],
+      "firmware": [
+        "mediatek/WIFI_RAM_CODE_MT7961_1.bin",
+        "mediatek/WIFI_MT7961_patch_mcu_1_2_hdr.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_MEDIATEK"
+      ]
+    },
+    {
+      "symbol": "MT7925U",
+      "sources": [
+        "drivers/net/wireless/mediatek/mt76/mt7925/usb.c",
+        "drivers/net/wireless/mediatek/mt76/mt7925/mcu.c"
+      ],
+      "firmware": [
+        "mediatek/mt7925/WIFI_RAM_CODE_MT7925_1_1.bin",
+        "mediatek/mt7925/WIFI_MT7925_PATCH_MCU_1_1_hdr.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_MEDIATEK"
+      ]
+    },
+    {
+      "symbol": "P54_USB",
+      "sources": [
+        "drivers/net/wireless/intersil/p54/p54usb.c"
+      ],
+      "firmware": [
+        "isl3886usb",
+        "isl3887usb"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_INTERSIL",
+        "P54_COMMON"
+      ]
+    },
+    {
+      "symbol": "ZD1211RW",
+      "sources": [
+        "drivers/net/wireless/zydas/zd1211rw"
+      ],
+      "firmware": [
+        "zd1211/zd1211_ur",
+        "zd1211/zd1211_ub",
+        "zd1211/zd1211_uphr",
+        "zd1211/zd1211b_ur",
+        "zd1211/zd1211b_ub",
+        "zd1211/zd1211b_uphr"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ZYDAS"
+      ]
+    },
+    {
+      "symbol": "USB_ZD1201",
+      "sources": [
+        "drivers/net/wireless/zydas/zd1201.c"
+      ],
+      "firmware": [
+        "zd1201.fw",
+        "zd1201-ap.fw"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_ZYDAS"
+      ]
+    },
+    {
+      "symbol": "AT76C50X_USB",
+      "sources": [
+        "drivers/net/wireless/atmel/at76c50x-usb.c"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_ATMEL"
+      ]
+    },
+    {
+      "symbol": "BRCMFMAC_USB",
+      "sources": [
+        "drivers/net/wireless/broadcom/brcm80211/brcmfmac/usb.c",
+        "drivers/net/wireless/broadcom/brcm80211/brcmfmac/firmware.h"
+      ],
+      "firmware": [
+        "brcm/brcmfmac43143.bin",
+        "brcm/brcmfmac43236b.bin",
+        "brcm/brcmfmac43242a.bin",
+        "brcm/brcmfmac43569.bin",
+        "brcm/brcmfmac4373.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_BROADCOM",
+        "BRCMFMAC"
+      ],
+      "preserve_disabled": [
+        "BRCMFMAC_SDIO",
+        "BRCMFMAC_PCIE"
+      ]
+    },
+    {
+      "symbol": "LIBERTAS_USB",
+      "sources": [
+        "drivers/net/wireless/marvell/libertas/if_usb.c"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_MARVELL",
+        "LIBERTAS"
+      ],
+      "preserve_disabled": [
+        "LIBERTAS_CS",
+        "LIBERTAS_SDIO",
+        "LIBERTAS_SPI"
+      ]
+    },
+    {
+      "symbol": "LIBERTAS_THINFIRM_USB",
+      "sources": [
+        "drivers/net/wireless/marvell/libertas_tf/if_usb.c"
+      ],
+      "firmware": [
+        "lbtf_usb.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_MARVELL",
+        "LIBERTAS_THINFIRM"
+      ]
+    },
+    {
+      "symbol": "MWIFIEX_USB",
+      "sources": [
+        "drivers/net/wireless/marvell/mwifiex/usb.c",
+        "drivers/net/wireless/marvell/mwifiex/usb.h"
+      ],
+      "firmware": [],
+      "helpers": [
+        "WLAN_VENDOR_MARVELL",
+        "MWIFIEX"
+      ],
+      "preserve_disabled": [
+        "MWIFIEX_SDIO",
+        "MWIFIEX_PCIE"
+      ]
+    },
+    {
+      "symbol": "RSI_USB",
+      "sources": [
+        "drivers/net/wireless/rsi/rsi_91x_usb.c",
+        "drivers/net/wireless/rsi/rsi_91x_hal.c"
+      ],
+      "firmware": [
+        "rsi/rs9113_*.rps",
+        "rsi/rs9116_*.rps"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_RSI",
+        "RSI_91X"
+      ],
+      "preserve_disabled": [
+        "RSI_SDIO"
+      ]
+    },
+    {
+      "symbol": "ORINOCO_USB",
+      "sources": [
+        "drivers/net/wireless/intersil/orinoco/orinoco_usb.c"
+      ],
+      "firmware": [
+        "orinoco_ezusb_fw"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_INTERSIL",
+        "HERMES"
+      ],
+      "notes": "The legacy HERMES core also requires existing PCI, PCMCIA or PPC_PMAC support. Do not enable unrelated platform buses to force this driver."
+    },
+    {
+      "symbol": "USB_NET_RNDIS_WLAN",
+      "sources": [
+        "drivers/net/wireless/rndis_wlan.c",
+        "drivers/net/wireless/legacy/rndis_wlan.c"
+      ],
+      "firmware": []
+    },
+    {
+      "symbol": "R8712U",
+      "sources": [
+        "drivers/staging/rtl8712"
+      ],
+      "firmware": [
+        "rtlwifi/rtl8712u.bin"
+      ],
+      "helpers": [
+        "STAGING"
+      ]
+    },
+    {
+      "symbol": "R8188EU",
+      "sources": [
+        "drivers/staging/rtl8188eu",
+        "drivers/staging/r8188eu"
+      ],
+      "firmware": [
+        "rtlwifi/rtl8188eufw.bin"
+      ],
+      "helpers": [
+        "STAGING"
+      ],
+      "notes": "Upstream 5.10-6.1 staging driver has depends on m and cannot be built in. Report the limitation unless the actual vendor source supports y."
+    },
+    {
+      "symbol": "PRISM2_USB",
+      "sources": [
+        "drivers/staging/wlan-ng"
+      ],
+      "firmware": [
+        "prism2_ru.fw"
+      ],
+      "helpers": [
+        "STAGING"
+      ]
+    },
+    {
+      "symbol": "VT6656",
+      "sources": [
+        "drivers/staging/vt6656"
+      ],
+      "firmware": [
+        "vntwusb.fw"
+      ],
+      "helpers": [
+        "STAGING"
+      ],
+      "notes": "Upstream staging driver has depends on m and cannot be built in. Report the limitation unless the actual vendor source supports y."
+    },
+    {
+      "symbol": "PLFXLC",
+      "sources": [
+        "drivers/net/wireless/purelifi/plfxlc"
+      ],
+      "firmware": [
+        "plfxlc/lifi-x.bin",
+        "plfxlc/lifi-xc.bin",
+        "plfxlc/lifi-xl.bin"
+      ],
+      "helpers": [
+        "WLAN_VENDOR_PURELIFI"
+      ]
+    }
   ]
 }

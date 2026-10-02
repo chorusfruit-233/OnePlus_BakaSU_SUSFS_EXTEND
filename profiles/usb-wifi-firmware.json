@@ -1,0 +1,67 @@
+{
+  "repository": "https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware",
+  "upstream": "https://gitlab.com/kernel-firmware/linux-firmware.git",
+  "release": "20260910",
+  "revision": "eeccccbe83daf22e1931e3557ba05b2c02427e4e",
+  "root_tree": "cdad904845f5fa2424e5c889cb8d7c84eb2f3440",
+  "whence_sha256": "8bc466434be59e1c044cb3821b30b7328859ca250a451bb6c799ffb21ae47f2e",
+  "extra_sources": [
+    {
+      "name": "wireless-regdb",
+      "release": "2026.09.03",
+      "url": "https://www.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2026.09.03.tar.xz",
+      "sha256": "b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d",
+      "archive_name": "wireless-regdb-2026.09.03.tar.xz",
+      "license": "ISC; original LICENSE and source database retained with archive",
+      "license_files": ["wireless-regdb-2026.09.03/LICENSE", "wireless-regdb-2026.09.03/README"],
+      "trusted_certificate": {
+        "path": "net/wireless/certs/wens.hex",
+        "sha256": "eeb049594eb3a83e50bfb6782e7fdf9e96fbd5c2954a0bbb0931cd55321d0bcf",
+        "signature": "regulatory.db.p7s"
+      },
+      "files": {
+        "regulatory.db": "wireless-regdb-2026.09.03/regulatory.db",
+        "regulatory.db.p7s": "wireless-regdb-2026.09.03/regulatory.db.p7s"
+      }
+    },
+    {
+      "name": "wireless-regdb",
+      "release": "2023.09.01",
+      "url": "https://www.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2023.09.01.tar.xz",
+      "sha256": "26d4c2a727cc59239b84735aad856b7c7d0b04e30aa5c235c4f7f47f5f053491",
+      "archive_name": "wireless-regdb-2023.09.01.tar.xz",
+      "license": "ISC; original LICENSE and source database retained with archive",
+      "license_files": ["wireless-regdb-2023.09.01/LICENSE", "wireless-regdb-2023.09.01/README"],
+      "trusted_certificate": {
+        "path": "net/wireless/certs/sforshee.hex",
+        "sha256": "cad3ddc5f274b8213c9956e2611a415252fd3619ca6700dc8ed396ed23acf6b0",
+        "signature": "regulatory.db.p7s"
+      },
+      "files": {
+        "regulatory.db": "wireless-regdb-2023.09.01/regulatory.db",
+        "regulatory.db.p7s": "wireless-regdb-2023.09.01/regulatory.db.p7s"
+      }
+    },
+    {
+      "name": "zd1211-firmware",
+      "release": "1.5",
+      "url": "https://downloads.sourceforge.net/project/zd1211/zd1211-firmware/1.5/zd1211-firmware-1.5.tar.bz2",
+      "sha256": "f11d3810d7f72833997f634584a586dcced71a353f965abf81062ec431d02b12",
+      "archive_name": "zd1211-firmware-1.5.tar.bz2",
+      "license": "GPL-2.0; original GPL-licensed header source and COPYING retained with archive",
+      "license_files": ["zd1211-firmware/COPYING", "zd1211-firmware/README"],
+      "files": {
+        "zd1211/zd1211_ub": "zd1211-firmware/zd1211_ub",
+        "zd1211/zd1211_uph": "zd1211-firmware/zd1211_uph",
+        "zd1211/zd1211_uphm": "zd1211-firmware/zd1211_uphm",
+        "zd1211/zd1211_uphr": "zd1211-firmware/zd1211_uphr",
+        "zd1211/zd1211_ur": "zd1211-firmware/zd1211_ur",
+        "zd1211/zd1211b_ub": "zd1211-firmware/zd1211b_ub",
+        "zd1211/zd1211b_uph": "zd1211-firmware/zd1211b_uph",
+        "zd1211/zd1211b_uphm": "zd1211-firmware/zd1211b_uphm",
+        "zd1211/zd1211b_uphr": "zd1211-firmware/zd1211b_uphr",
+        "zd1211/zd1211b_ur": "zd1211-firmware/zd1211b_ur"
+      }
+    }
+  ]
+}

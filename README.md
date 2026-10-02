@@ -1,17 +1,28 @@
-# USB WiFi 内建支持
+# USB WiFi 驱动与固件内建支持
 
-主分支 `main` 将原 `OnePlus_KSU_WIFI` 的 USB 无线网卡驱动方案整合到本仓库的内核构建中。驱动与 `cfg80211/mac80211` 等依赖以 `=y` 链接进同一个内核 Image，不再安装独立 WiFi KernelSU 模块或调用 `ksud insmod`。
+主分支 `main` 为构建矩阵中的每个机型，按它实际同步到的内核源码尽可能内建 USB 无线网卡驱动、依赖与固件。驱动和 `cfg80211/mac80211` 等依赖以 `=y` 链接进内核 Image；所选驱动可获取的固件通过 `CONFIG_EXTRA_FIRMWARE` 同样链接进 Image，启动后由内核固件加载器直接提供。
 
-- 在 Actions 的 **Build and Release OnePlus Kernels (Built-in USB WiFi)** 中选择 `main`。首次建议指定 `config_path=configs/oos16/OP13.json` 验证单设备，再扩大构建范围。
-- 构建始终启用内建 USB WiFi。`profiles/usb-wifi.json` 维护驱动与依赖清单：移植原项目的 USB 驱动候选，并为 rtw88 指定实际 USB 芯片驱动。只使用对应内核树已有的代码，不引入外部驱动或跨版本移植。
-- `gki_defconfig` 生成后应用配置，经过 `olddefconfig` 再严格验证。源码中没有的候选会列出并跳过；已请求的驱动或依赖若仍为 `m/n`，以及没有任何可用驱动时，会直接停止构建。
-- 刷机包带 `_USBWiFi.zip` 后缀，包内 `usb-wifi.config.txt` 列出最终启用项和源码缺少的候选。相同信息也显示在 Actions 摘要中。
+- 在 Actions 的 **Build and Release OnePlus Kernels (Built-in USB WiFi)** 中选择 `main`。`config_path` 可指定一个机型配置，留空则沿用工作流的机型矩阵。
+- `profiles/usb-wifi.json` 维护 USB 网卡候选。构建使用该机型的完整 Kconfig 解析菜单、依赖和版本差异，逐个尝试内建；源码没有的驱动、无法满足的依赖都会保留具体原因，不让单个不可用候选阻断其他可用驱动。未在该机型内核树中出现的驱动仍需后续回移。
+- 固件只针对最终启用的驱动准备，从固定版本的 `linux-firmware` 和 ZD1211 官方固件包下载，记录来源、校验值和许可证。固件放入构建目录并通过内核的 [内建固件机制](https://docs.kernel.org/driver-api/firmware/built-in-fw.html) 写入 `CONFIG_EXTRA_FIRMWARE` / `CONFIG_EXTRA_FIRMWARE_DIR`；已覆盖的固件无需额外安装。
+- `cfg80211` 需要外部监管数据库时同时内建 `regulatory.db`，启用签名验证时选择与该内核实际信任证书匹配的官方 `wireless-regdb` 版本和签名。没有匹配的已固定版本会列为缺失。下载采用有限重试与校验后的对象缓存，减少批量构建的重复下载。
+- 个别固件缺失时会明确标记覆盖不完整，相关芯片仍可能需要设备已有固件。驱动经过 `olddefconfig` 后按实际 `=y` 的结果准备固件；下载或校验失败、没有任何可内建驱动、后续配置使已确认内建的驱动降为 `m/n`，或内建固件配置丢失都会停止构建。Image 编译完成后再次验证最终配置，并逐个检查固件原始字节和精确请求名称确实存在于本次编译的 Image 中；刷机包只使用这一已验证产物。
+- 刷机包带 `_USBWiFi.zip` 后缀。包内 `usb-wifi.config.txt` 按机型和内核列出驱动覆盖、未启用原因、内建与缺失固件；`usb-wifi/plan.json`、`usb-wifi/manifest.json`、`usb-wifi/WHENCE` 与 `usb-wifi/licenses/` 保存配置计划、固件来源和许可证。Actions 摘要显示覆盖报告，debug 产物包含同一套元数据。
 - 勾选 `make_release` 时发布独立的 `usb-wifi-*` 预发布版本，不替换已有的 Latest Release。默认仍只生成构建产物。
-- 刷入内建 USB WiFi 内核前，禁用或卸载原 `oneplus_wifi_lkm` 模块，刷入后重启。内建驱动不能用 `rmmod` 卸载，恢复普通版本需要刷回对应的普通内核。
-- 内建驱动不等于内建固件：固件仍由设备固件搜索路径提供；本仓库不下载或打包固件。USB 芯片支持、OTG 供电和 Android 网络管理能力仍需真机验证。
-- 无线核心内建会改变内核配置，厂商 WiFi 模块与现有补丁的兼容性仍需验证；不要把消除独立 USB 驱动加载步骤理解为整机兼容性已经通过测试。
+- 刷入前禁用或卸载原 `oneplus_wifi_lkm` 模块，刷入后重启。内建驱动不能用 `rmmod` 卸载，恢复普通版本需要刷回对应的普通内核。
 
-本地回归检查：`python3 -m unittest discover -s tests -v`。同步上游更新时保留配置应用、最终验证和 USBWiFi 产物命名。以下为上游项目说明。
+45 项候选同时覆盖常见驱动和旧款网卡。只允许模块加载的驱动会跳过；部分驱动有上游实验限制，报告会保留说明。固件覆盖状态针对本次源码和清单识别出的需求，实际 USB 网卡绑定及工作情况仍需测试。
+
+已在上游 arm64 `defconfig` 基础上用原生 C Kconfig 验证 5.10、5.15、6.1、6.6、6.12，分别保留 27、27、29、33、31 项内建 USB 驱动。此检查验证配置解析及 `olddefconfig` 的结果，尚未完成所有机型的完整内核编译和真机测试。OTG 供电、Android 网络管理，以及厂商 WiFi 模块与现有补丁的兼容性仍需逐机型验证。
+
+本地回归检查：
+
+```sh
+python3 -m pip install --target /tmp/usb-wifi-python -r scripts/requirements-usb-wifi.txt
+PYTHONPATH=/tmp/usb-wifi-python python3 -m unittest discover -s tests -v
+```
+
+同步上游更新时保留每机型配置解析、固件内建、编译后验证和 USBWiFi 产物命名。以下为上游项目说明。
 
 ---
 
@@ -167,4 +178,3 @@ Any and all donations are appreciated!
 PayPal: [paypal.me/fatalcoder524](https://paypal.me/fatalcoder524)
 
 DM on Telegram for UPI donations!
-

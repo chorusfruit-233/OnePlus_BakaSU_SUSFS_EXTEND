@@ -2,9 +2,9 @@ name: Validate built-in USB WiFi integration
 on:
   push:
     branches: [main]
-    paths: ['scripts/builtin_usb_wifi.py', 'profiles/usb-wifi.json', 'tests/**', '.github/workflows/test-usb-wifi.yml']
+    paths: ['scripts/**', 'profiles/**', 'tests/**', '.github/actions/build-kernel/**', '.github/workflows/build-kernel-release.yml', '.github/workflows/test-usb-wifi.yml', 'README.md']
   pull_request:
-    paths: ['scripts/builtin_usb_wifi.py', 'profiles/usb-wifi.json', 'tests/**', '.github/workflows/test-usb-wifi.yml']
+    paths: ['scripts/**', 'profiles/**', 'tests/**', '.github/actions/build-kernel/**', '.github/workflows/build-kernel-release.yml', '.github/workflows/test-usb-wifi.yml', 'README.md']
 permissions:
   contents: read
 jobs:
@@ -12,4 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Kconfig dependency resolver
+        run: python3 -m pip install --disable-pip-version-check -r scripts/requirements-usb-wifi.txt
       - run: python3 -m unittest discover -s tests -v
