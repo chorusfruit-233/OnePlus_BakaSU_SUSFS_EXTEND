@@ -22,6 +22,14 @@ python3 -m pip install --target /tmp/usb-wifi-python -r scripts/requirements-usb
 PYTHONPATH=/tmp/usb-wifi-python python3 -m unittest discover -s tests -v
 ```
 
+## NoMount 内建支持
+
+所有机型以及 ReSukiSU / KernelSU 两种构建默认内建 [官方 NoMount](https://github.com/maxsteeel/nomount/tree/c5fad9d8f97c5a207f7342fd91789449915ea047)。源码固定到 `profiles/nomount.json` 的提交，并验证归档 SHA256；按官方手动集成方式接入 `fs/Kconfig` / `fs/Makefile`，启用 `CONFIG_NOMOUNT=y` 和其通信所需的 `CONFIG_KEYS=y`。xattr 回调与 VFS 调用的参数根据该机型实际头文件适配，避免仅按版本号判断厂商回移接口；清单分别记录上游和适配后源码的校验值。
+
+构建在 `olddefconfig` 后检查配置，编译后检查 `System.map` 中的初始化函数与 key type，以及本次 Image 中的初始化信息；缺失则停止打包。ZIP 和 debug 产物的 `nomount-support/` 包含提交、源码校验值、许可证和验证报告。
+
+刷入后仍需在管理器中安装[官方 NoMount 元模块](https://github.com/maxsteeel/nomount/releases)，用于加载模块规则和提供 WebUI；内建支持无需加载 `nomount.ko`。可用元模块附带的 `nm version` 检查内核通信。已在上游 5.10、5.15、6.1、6.6、6.12 上实际编译 ARM64 NoMount 对象并检查关键符号，53 项回归测试通过；尚未完成所有机型的完整内核编译和真机测试。
+
 同步上游更新时保留每机型配置解析、固件内建、编译后验证和 USBWiFi 产物命名。以下为上游项目说明。
 
 ---

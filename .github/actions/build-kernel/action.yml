@@ -1803,6 +1803,19 @@ runs:
             fi
         fi
 
+    - name: Integrate built-in NoMount
+      shell: bash
+      run: |
+        set -euo pipefail
+        NOMOUNT_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_nomount.py"
+        NOMOUNT_LOCK="$GITHUB_WORKSPACE/action-source/profiles/nomount.json"
+        NOMOUNT_URL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["archive_url"])' "$NOMOUNT_LOCK")
+        NOMOUNT_ARCHIVE="$RUNNER_TEMP/nomount-source.tar.gz"
+        curl --fail --location --proto '=https' --retry 3 --retry-delay 2 \
+          "$NOMOUNT_URL" -o "$NOMOUNT_ARCHIVE"
+        python3 "$NOMOUNT_TOOL" install --source "$COMMON_KERNEL_FOLDER" --archive "$NOMOUNT_ARCHIVE"
+        cp -a "$COMMON_KERNEL_FOLDER/nomount-support" "$DEBUG_ARTIFACTS_FOLDER/"
+
     - name: Add Tmpfs Support
       shell: bash
       run: |
@@ -2295,6 +2308,9 @@ runs:
           --plan "$OUT/usb-wifi/plan.json" --metadata-dir "$OUT/usb-wifi" \
           --report "$OUT/usb-wifi.config.txt"
         
+        NOMOUNT_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_nomount.py"
+        python3 "$NOMOUNT_TOOL" verify --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config"
+
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
         
@@ -2365,6 +2381,14 @@ runs:
           --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
           --plan "$OUT/usb-wifi/plan.json" --metadata-dir "$OUT/usb-wifi" \
           --report "$OUT/usb-wifi.config.txt" --image "$IMG"
+        python3 "$NOMOUNT_TOOL" verify --source "$COMMON_KERNEL_FOLDER" \
+          --config "$OUT/.config" --system-map "$OUT/System.map" --image "$IMG" \
+          --report "$COMMON_KERNEL_FOLDER/nomount-support/report.txt"
+        cp -a "$COMMON_KERNEL_FOLDER/nomount-support" "$DEBUG_ARTIFACTS_FOLDER/"
+        {
+          echo '### Built-in NoMount'
+          cat "$COMMON_KERNEL_FOLDER/nomount-support/report.txt"
+        } >> "$GITHUB_STEP_SUMMARY"
         cp -a "$OUT/usb-wifi" "$DEBUG_ARTIFACTS_FOLDER/"
         cp "$OUT/usb-wifi.config.txt" "$DEBUG_ARTIFACTS_FOLDER/usb-wifi.config.txt"
         cat "$OUT/usb-wifi.config.txt"
@@ -2531,6 +2555,7 @@ runs:
         cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
         cp "$COMMON_KERNEL_FOLDER/out/usb-wifi.config.txt" "$AK3_FOLDER/usb-wifi.config.txt"
         cp -a "$COMMON_KERNEL_FOLDER/out/usb-wifi" "$AK3_FOLDER/"
+        cp -a "$COMMON_KERNEL_FOLDER/nomount-support" "$AK3_FOLDER/"
         
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
@@ -2607,6 +2632,7 @@ runs:
           echo "Clean Build: ${{ inputs.clean }}"
           echo ""
           echo "=== OnePlus Features ==="
+          echo "NoMount: built-in; pinned source and linkage report in nomount-support/"
           echo "USB WiFi: per-device built-in drivers and firmware (coverage in usb-wifi.config.txt; sources/licenses in usb-wifi/)"
           echo "BBR: ${{ env.OP_BBR }}"
           echo "BBG: ${{ env.OP_BBG }}"
@@ -2674,6 +2700,7 @@ runs:
           echo ""
           echo "| Feature | Status |"
           echo "|---------|--------|"
+          echo "| **NoMount** | Built-in (=y); source, license and linkage report included in ZIP |"
           echo "| **USB WiFi** | Per-device built-in drivers and firmware; coverage, sources and licenses included in ZIP |"
           echo "| **BBR** | ${{ env.OP_BBR }} |"
           echo "| **BBG** | ${{ env.OP_BBG }} |"

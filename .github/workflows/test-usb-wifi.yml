@@ -1,4 +1,4 @@
-name: Validate built-in USB WiFi integration
+name: Validate built-in USB WiFi and NoMount integration
 on:
   push:
     branches: [main]
