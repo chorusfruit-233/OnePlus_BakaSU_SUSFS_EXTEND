@@ -59,13 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           
-          echo "[" > all_configs.json
-          mapfile -t files < <(find configs/ -name "*.json")
-          for i in "${!files[@]}"; do
-            cat "${files[$i]}" >> all_configs.json
-            [[ $((i+1)) -lt ${#files[@]} ]] && echo "," >> all_configs.json
-          done
-          echo "]" >> all_configs.json
+          python3 scripts/build_target.py --root "$GITHUB_WORKSPACE" > all_configs.json
 
       - name: Resolve Unique Projects
         id: set-matrix

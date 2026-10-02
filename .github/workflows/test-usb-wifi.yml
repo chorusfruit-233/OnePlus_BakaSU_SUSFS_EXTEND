@@ -2,9 +2,9 @@ name: Validate built-in USB WiFi and NoMount integration
 on:
   push:
     branches: [main]
-    paths: ['scripts/**', 'profiles/**', 'tests/**', '.github/actions/build-kernel/**', '.github/workflows/build-kernel-release.yml', '.github/workflows/test-usb-wifi.yml', 'README.md']
+    paths: ['scripts/**', 'profiles/**', 'tests/**', 'configs/**', 'manifests/**', '.github/actions/build-kernel/**', '.github/workflows/build-kernel-release.yml', '.github/workflows/mirror-toolchains.yml', '.github/workflows/test-usb-wifi.yml', 'README.md', 'compatibility.md']
   pull_request:
-    paths: ['scripts/**', 'profiles/**', 'tests/**', '.github/actions/build-kernel/**', '.github/workflows/build-kernel-release.yml', '.github/workflows/test-usb-wifi.yml', 'README.md']
+    paths: ['scripts/**', 'profiles/**', 'tests/**', 'configs/**', 'manifests/**', '.github/actions/build-kernel/**', '.github/workflows/build-kernel-release.yml', '.github/workflows/mirror-toolchains.yml', '.github/workflows/test-usb-wifi.yml', 'README.md', 'compatibility.md']
 permissions:
   contents: read
 jobs:

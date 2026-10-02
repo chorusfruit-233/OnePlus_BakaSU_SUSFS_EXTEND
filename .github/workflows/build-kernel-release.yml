@@ -1,4 +1,4 @@
-name: Build and Release OnePlus Kernels (Built-in USB WiFi)
+name: Build OnePlus 13 OOS16 (Built-in USB WiFi)
 
 permissions:
   contents: write
@@ -12,28 +12,6 @@ on:
         required: true
         type: boolean
         default: false
-      op_model:
-        description: 'Select the OnePlus kernels to build'
-        required: true
-        type: choice
-        options:
-          - OOS14+15+16
-          - OOS15+16
-          - OOS14+15
-          - OOS16
-          - OOS15
-          - OOS14
-          - android16-6.12
-          - android15-6.6
-          - android14-6.1
-          - android13-5.15
-          - android12-5.10
-        default: OOS14+15+16
-      config_path:
-        description: 'Optional exact config path for a single-device validation build (for example configs/oos16/OP-ACE-2.json)'
-        required: false
-        type: string
-        default: ''
       ksu_type:
         description: 'Select KSU Type'
         required: true
@@ -70,24 +48,8 @@ on:
         description: 'Custom kernel build timestamp for uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty for current time.'
         type: string
         default: ''
-      android12-5_10_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android12-5.10'
-        type: string
-        default: ''
-      android13-5_15_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android13-5.15'
-        type: string
-        default: ''
-      android14-6_1_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android14-6.1'
-        type: string
-        default: ''
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
-        type: string
-        default: ''
-      android16-6_12_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
         default: ''
 
@@ -98,11 +60,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       device_count: ${{ steps.set-matrix.outputs.count }}
       active_gki_keys: ${{ steps.set-matrix.outputs.active_gki_keys }}
-      susfs_hash_android12_5_10: ${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}
-      susfs_hash_android13_5_15: ${{ steps.set-matrix.outputs.susfs_hash_android13_5_15 }}
-      susfs_hash_android14_6_1:  ${{ steps.set-matrix.outputs.susfs_hash_android14_6_1 }}
       susfs_hash_android15_6_6:  ${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}
-      susfs_hash_android16_6_12: ${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}
       ksu_resolved_hash:    ${{ steps.set-matrix.outputs.ksu_resolved_hash }}
       susfs_base_version: ${{ steps.set-matrix.outputs.susfs_base_version }}
     env:
@@ -113,7 +71,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           sparse-checkout: |
-            configs/
+            configs/oos16/OP13.json
+            manifests/oos16/oneplus_13_w.xml
+            scripts/build_target.py
           sparse-checkout-cone-mode: false
 
       - name: 🔍 Generate build matrix
@@ -123,87 +83,12 @@ jobs:
           set -euo pipefail
           echo "::group::Matrix generation"
           
-          input="${{ inputs.op_model }}"
-          config_path="${{ inputs.config_path }}"
           ksu_type="${{ inputs.ksu_type }}"
           ksu_hash="${{ inputs.ksu_branch_or_hash }}"
-          
-          echo "[" > matrix.json
-          if [ -n "$config_path" ]; then
-            if [[ "$config_path" != configs/*.json || "$config_path" == *".."* || ! -f "$config_path" ]]; then
-              echo "::error::Invalid config_path '$config_path'; expected an existing configs/*.json file"
-              exit 1
-            fi
-            all_json_files=("$config_path")
-            echo "Single-device validation config: $config_path"
-          else
-            mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
-          fi
-          for i in "${!all_json_files[@]}"; do
-            file="${all_json_files[$i]}"
-            if [ -f "$file" ]; then
-              jq -r '.' "$file" >> matrix.json
-              if [ $((i+1)) -lt ${#all_json_files[@]} ]; then
-                echo "," >> matrix.json
-              fi
-            fi
-          done
-          echo "]" >> matrix.json
-          
-          jq_filter="."
-          
-          case "$input" in
-            OOS14+15+16)
-              ;;
-            OOS15+16)
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
-              ;;
-            OOS14+15)
-              jq_filter="map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
-              ;;
-            OOS16)
-              jq_filter="map(select(.os_version == \"OOS16\"))"
-              ;;
-            OOS15)
-              jq_filter="map(select(.os_version == \"OOS15\"))"
-              ;;
-            OOS14)
-              jq_filter="map(select(.os_version == \"OOS14\"))"
-              ;;
-            android*-*.*)
-              # Extract android version and kernel version
-              IFS='-' read -r av kv <<< "$input"
-              
-              # Build android*-* only for OOS15 and OOS16
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\")) | map(select(.android_version == \"$av\" and .kernel_version == \"$kv\"))"
-              
-              echo "ℹ️  Android-Kernel filter applied: $av-$kv"
-              echo "   Restricted to: OOS15 and OOS16 only"
-              ;;
-            *)
-              echo "::warning::Unknown input '$input'. Using empty filter."
-              jq_filter="map(select(false))"
-              ;;
-          esac
-          
-          filtered=$(jq -c "$jq_filter" matrix.json)
-          count=$(jq 'length' <<<"$filtered")
-          
-          filtered=$(echo "$filtered" | jq '
-            sort_by(
-              (.os_version | gsub("OOS"; "") | tonumber) * -1,
-              .model
-            )
-          ')
-          
-          if [ "$count" -eq 0 ]; then
-            echo "::error::No config files found for input '$input' after applying filters!"
-            echo ""
-            echo "Available configurations:"
-            jq -r '.[] | "  - \(.model) (\(.os_version), \(.android_version)-\(.kernel_version))"' matrix.json
-            exit 1
-          fi
-          
+          python3 scripts/build_target.py --root "$GITHUB_WORKSPACE" > matrix.json
+          filtered=$(jq -c '.' matrix.json)
+          count=$(jq 'length' matrix.json)
+
           # Inject KSU type and hash into every device config
           merged_matrix=$(jq \
             --arg ksu_type "$ksu_type" \
@@ -284,19 +169,11 @@ jobs:
           GITLAB_PROJECT_PATH="simonpunk/susfs4ksu"
           
           declare -A default_branches=(
-            ["android12-5.10"]="gki-android12-5.10"
-            ["android13-5.15"]="gki-android13-5.15"
-            ["android14-6.1"]="gki-android14-6.1"
             ["android15-6.6"]="gki-android15-6.6"
-            ["android16-6.12"]="gki-android16-6.12"
           )
           
           declare -A user_inputs=(
-            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
-            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
-            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
             ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
-            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
           )
           
           mapfile -t active_keys < <(
@@ -374,11 +251,7 @@ jobs:
           echo "active_gki_keys=$active_gki_keys_csv" >> "$GITHUB_OUTPUT"
           
           # Write hash to GITHUB_OUTPUT
-          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
           
           # SUSFS_VERSION — only when releasing
           if [ "${{ inputs.make_release }}" = "true" ]; then
@@ -410,17 +283,9 @@ jobs:
           
           # Inject susfs_resolved_hash into each device in the matrix
           susfs_hashes_json=$(jq -n \
-            --arg a12 "${susfs_hashes[android12-5.10]:-unknown}" \
-            --arg a13 "${susfs_hashes[android13-5.15]:-unknown}" \
-            --arg a14 "${susfs_hashes[android14-6.1]:-unknown}" \
             --arg a15 "${susfs_hashes[android15-6.6]:-unknown}" \
-            --arg a16 "${susfs_hashes[android16-6.12]:-unknown}" \
             '{
-              "android12-5.10": $a12,
-              "android13-5.15": $a13,
-              "android14-6.1":  $a14,
-              "android15-6.6":  $a15,
-              "android16-6.12": $a16
+              "android15-6.6":  $a15
             }')
           
           echo "$susfs_hashes_json" > susfs_lookup_temp.json
@@ -482,7 +347,7 @@ jobs:
             cat << 'EOF'
           ## 🎯 Build Plan
           
-          **Target:** ${{ inputs.op_model }}  
+          **Target:** OP13 / OOS16 / oneplus_13_w.xml
           **Devices:** ${{ steps.set-matrix.outputs.count }}  
           
           **Configuration:**
@@ -504,19 +369,11 @@ jobs:
           
           # Display SUSFS config for each kernel version
           declare -A susfs_inputs=(
-            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
-            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
-            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
             ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
-            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
           )
           
           declare -A step_hashes=(
-            ["android12-5.10"]="${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}"
-            ["android13-5.15"]="${{ steps.set-matrix.outputs.susfs_hash_android13_5_15 }}"
-            ["android14-6.1"]="${{ steps.set-matrix.outputs.susfs_hash_android14_6_1 }}"
             ["android15-6.6"]="${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}"
-            ["android16-6.12"]="${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}"
           )
           
           # Iterate only on the GKI versions present in this run
@@ -542,11 +399,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> **💡 Note:** Hashes are resolved at run time via API calls before builds start." >> $GITHUB_STEP_SUMMARY
           
-          # Add OOS restriction note for android-kernel filters
-          if [[ "${{ inputs.op_model }}" == android*-*.* ]]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "> **⚠️ Android-Kernel Filter:** Only OOS15 and OOS16 devices will be built for \`${{ inputs.op_model }}\`" >> $GITHUB_STEP_SUMMARY
-          fi
 
   mirror_toolchain:
     needs: set-op-model
@@ -601,22 +453,14 @@ jobs:
       - name: Download active SUSFS archives once
         env:
           ACTIVE_GKI_KEYS: ${{ needs.set-op-model.outputs.active_gki_keys }}
-          SUSFS_HASH_ANDROID12_5_10: ${{ needs.set-op-model.outputs.susfs_hash_android12_5_10 }}
-          SUSFS_HASH_ANDROID13_5_15: ${{ needs.set-op-model.outputs.susfs_hash_android13_5_15 }}
-          SUSFS_HASH_ANDROID14_6_1: ${{ needs.set-op-model.outputs.susfs_hash_android14_6_1 }}
           SUSFS_HASH_ANDROID15_6_6: ${{ needs.set-op-model.outputs.susfs_hash_android15_6_6 }}
-          SUSFS_HASH_ANDROID16_6_12: ${{ needs.set-op-model.outputs.susfs_hash_android16_6_12 }}
         run: |
           set -euo pipefail
           echo "::group::Download shared SUSFS archives"
           mkdir -p susfs-archives
 
           declare -A hashes=(
-            ["android12-5.10"]="$SUSFS_HASH_ANDROID12_5_10"
-            ["android13-5.15"]="$SUSFS_HASH_ANDROID13_5_15"
-            ["android14-6.1"]="$SUSFS_HASH_ANDROID14_6_1"
             ["android15-6.6"]="$SUSFS_HASH_ANDROID15_6_6"
-            ["android16-6.12"]="$SUSFS_HASH_ANDROID16_6_12"
           )
           declare -A seen=()
 
@@ -1038,11 +882,7 @@ jobs:
           
           # Hash map for GKI version
           declare -A susfs_map=(
-            ["android12-5.10"]="${{ needs.set-op-model.outputs.susfs_hash_android12_5_10 }}"
-            ["android13-5.15"]="${{ needs.set-op-model.outputs.susfs_hash_android13_5_15 }}"
-            ["android14-6.1"]="${{ needs.set-op-model.outputs.susfs_hash_android14_6_1 }}"
             ["android15-6.6"]="${{ needs.set-op-model.outputs.susfs_hash_android15_6_6 }}"
-            ["android16-6.12"]="${{ needs.set-op-model.outputs.susfs_hash_android16_6_12 }}"
           )
           
           # List of GKI versions present in this run
@@ -1395,7 +1235,7 @@ jobs:
             OS_VERS="None"
             KSU_VERS="Unknown"
           else
-            # Extract models (2nd part), OS versions (3rd part), and KSU versions (6th part) from AK3_OP12_OOS15_android15-6.6_ReSukiSU_30700...zip
+            # Extract models (2nd part), OS versions (3rd part), and KSU versions (6th part) from AK3_OP13_OOS16_android15-6.6_ReSukiSU_30700...zip
             MODELS=$(printf "%s\n" "${ZIPS[@]}" | awk -F'/' '{print $NF}' | awk -F'_' '{print $2}' | sort -u | paste -sd ", " -)
             OS_VERS=$(printf "%s\n" "${ZIPS[@]}" | awk -F'/' '{print $NF}' | awk -F'_' '{print $3}' | sort -u | paste -sd ", " -)
             KSU_VERS=$(printf "%s\n" "${ZIPS[@]}" | awk -F'/' '{print $NF}' | awk -F'_' '{print $6}' | sort -u | paste -sd ", " -)
