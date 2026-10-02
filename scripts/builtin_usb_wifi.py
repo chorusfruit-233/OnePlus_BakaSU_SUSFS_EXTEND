@@ -143,6 +143,8 @@ class DriverPlanner:
         for driver in self.entries:
             self.allowed.update(driver.get('helpers', []))
         self.baseline = {sym.name: sym.str_value for sym in kconf.unique_defined_syms}
+        self.abi_preserved = {name: self.baseline[name] for name in profile.get('preserve_abi', [])
+                              if name in self.baseline}
         self.preserved = {name for driver in self.entries for name in driver.get('preserve_disabled', [])
                           if self.baseline.get(name) == 'n'}
         self.selected = []
@@ -163,13 +165,19 @@ class DriverPlanner:
                 selection.set_value(2)
 
     def _can_change(self, symbol):
-        if symbol.name in IMMUTABLE or symbol.name in self.preserved or symbol.is_constant or not symbol.nodes:
+        if (symbol.name in IMMUTABLE or symbol.name in self.preserved or symbol.name in self.abi_preserved
+                or symbol.is_constant or not symbol.nodes):
             return False
         return (symbol.name in self.allowed or self.baseline.get(symbol.name) in ('m', 'y')
                 or any(node.filename.startswith(DEPENDENCY_PATHS) for node in symbol.nodes))
 
     def _preserved_ok(self):
-        return all(self.kconf.syms[name].tri_value == 0 for name in self.preserved)
+        return (all(self.kconf.syms[name].tri_value == 0 for name in self.preserved)
+                and not self._abi_changes())
+
+    def _abi_changes(self):
+        return [f'CONFIG_{name}={value}->{self.kconf.syms[name].str_value}'
+                for name, value in self.abi_preserved.items() if self.kconf.syms[name].str_value != value]
 
     def _satisfy(self, expression, stack):
         if kc.expr_value(expression) == 2:
@@ -279,16 +287,20 @@ class DriverPlanner:
                             and all(self.kconf.syms[entry['symbol']].tri_value == 2 for entry in self.selected)):
                         helper_results.append({'symbol': helper, 'status': 'builtin'})
                     else:
+                        abi_changes = self._abi_changes()
                         self._restore(helper_snapshot)
                         helper_results.append({'symbol': helper, 'status': 'blocked',
-                                               'reason': kc.expr_str(item.direct_dep)})
+                                               'reason': ('would change stock wireless ABI: ' + ', '.join(abi_changes))
+                                                         if abi_changes else kc.expr_str(item.direct_dep)})
             if successful and self._preserved_ok() and all(self.kconf.syms[entry['symbol']].tri_value == 2 for entry in self.selected):
                 self.selected.append(driver)
                 results.append({'symbol': name, 'status': 'builtin', 'reason': '', 'helpers': helper_results})
             else:
+                abi_changes = self._abi_changes()
                 self._restore(snapshot)
                 results.append({'symbol': name, 'status': 'blocked',
-                                'reason': 'cannot satisfy built-in dependencies: ' + kc.expr_str(symbol.direct_dep),
+                                'reason': ('would change stock wireless ABI: ' + ', '.join(abi_changes)) if abi_changes else
+                                          'cannot satisfy built-in dependencies: ' + kc.expr_str(symbol.direct_dep),
                                 'value': symbol.str_value})
         for record, driver in zip(results, self.entries):
             if driver.get('notes'):
@@ -305,10 +317,12 @@ class DriverPlanner:
             values[name] = 'y'
         for name in self.preserved:
             values[name] = 'n'
+        values.update(self.abi_preserved)
         return {'schema': 2, 'model': model, 'kernel': version,
                 'required': self.profile['required'], 'drivers': results,
                 'selected': self.selected, 'assignments': values,
                 'kconfig_compatibility': self.kconf.compatibility_notes,
+                'abi_preserved': self.abi_preserved,
                 'preserved_disabled': sorted(self.preserved)}
 
 
@@ -343,9 +357,18 @@ def reconcile_helpers(plan, values):
                 helper.pop('reason', None)
 
 
+def abi_config_failures(plan, values):
+    return [f'CONFIG_{name} changed stock wireless ABI ({expected}->{values.get(name, "n")})'
+            for name, expected in plan.get('abi_preserved', {}).items()
+            if values.get(name, 'n') != expected]
+
+
 def prepare_firmware(source, config, plan_path, staging, metadata_dir, lock=None, cache_dir=None):
     plan = json.loads(Path(plan_path).read_text())
     values = read_config(config)
+    abi_failures = abi_config_failures(plan, values)
+    if abi_failures:
+        raise ValueError('; '.join(abi_failures))
     for name in plan['required']:
         if values.get(name) != 'y':
             raise ValueError(f'olddefconfig dropped required core CONFIG_{name}=y')
@@ -423,7 +446,7 @@ def verify(source, config, plan_path, metadata_dir, report, image=None):
     values = read_config(config)
     reconcile_helpers(plan, values)
     write_json(plan_path, plan)
-    failures = []
+    failures = abi_config_failures(plan, values)
     for name in plan['required'] + [entry['symbol'] for entry in plan['selected']]:
         if values.get(name) != 'y':
             failures.append(f'CONFIG_{name}={values.get(name, "n")} (expected y)')
@@ -462,6 +485,9 @@ def verify(source, config, plan_path, metadata_dir, report, image=None):
              'Firmware revision: ' + manifest['source']['revision'], '', 'Drivers:']
     if plan.get('kconfig_compatibility'):
         lines[-1:-1] = ['Kconfig compatibility:'] + plan['kconfig_compatibility'] + ['']
+    if plan.get('abi_preserved'):
+        lines[-1:-1] = ['Stock wireless ABI options preserved:'] + [
+            f'CONFIG_{name}={value}' for name, value in plan['abi_preserved'].items()] + ['']
     for item in plan['drivers']:
         lines.append(f'CONFIG_{item["symbol"]}: {item["status"]}' + (f' — {item["reason"]}' if item['reason'] else ''))
         if item.get('notes'):

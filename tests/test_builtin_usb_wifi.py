@@ -158,6 +158,66 @@ config SECOND_USB
         with self.assertRaisesRegex(ValueError, 'lacks required'):
             self.apply()
 
+    def add_legacy_abi_fixture(self):
+        with self.kconfig.open('a') as handle:
+            handle.write('''
+config CFG80211_WEXT
+    bool "legacy compatibility"
+config CFG80211_WEXT_EXPORT
+    bool
+    select CFG80211_WEXT
+config LEGACY_USB
+    tristate "legacy USB"
+    depends on USB
+    select CFG80211_WEXT_EXPORT
+''')
+        self.profile['preserve_abi'] = ['CFG80211_WEXT', 'CFG80211_WEXT_EXPORT']
+
+    def test_driver_select_cannot_change_stock_abi(self):
+        self.add_legacy_abi_fixture()
+        self.profile['drivers'].insert(0, {'symbol': 'LEGACY_USB'})
+        plan = self.apply()
+        self.assertEqual(plan['drivers'][0]['status'], 'blocked')
+        self.assertIn('stock wireless ABI', plan['drivers'][0]['reason'])
+        values = wifi.read_config(self.config)
+        self.assertEqual(values['CFG80211_WEXT'], 'n')
+        self.assertEqual(values['CFG80211_WEXT_EXPORT'], 'n')
+        self.assertEqual(values['GOOD_USB'], 'y')
+        self.assertEqual(plan['abi_preserved']['CFG80211_WEXT'], 'n')
+
+    def test_legacy_driver_is_kept_when_stock_abi_already_enables_wext(self):
+        self.add_legacy_abi_fixture()
+        with self.kconfig.open('a') as handle:
+            handle.write('''
+config STOCK_LEGACY_SUPPORT
+    bool "stock legacy support"
+    select CFG80211_WEXT_EXPORT
+''')
+        with self.config.open('a') as handle:
+            handle.write('CONFIG_STOCK_LEGACY_SUPPORT=y\n')
+        self.profile['drivers'].append({'symbol': 'LEGACY_USB'})
+        plan = self.apply()
+        self.assertEqual(plan['drivers'][-1]['status'], 'builtin')
+        self.assertEqual(plan['abi_preserved']['CFG80211_WEXT'], 'y')
+
+    def test_optional_helper_that_changes_abi_is_rolled_back(self):
+        self.add_legacy_abi_fixture()
+        self.profile['drivers'][0]['helpers'] = ['LEGACY_USB']
+        plan = self.apply()
+        self.assertEqual(plan['drivers'][0]['status'], 'builtin')
+        self.assertEqual(plan['drivers'][0]['helpers'][0]['status'], 'blocked')
+        self.assertEqual(wifi.read_config(self.config)['CFG80211_WEXT'], 'n')
+
+    def test_native_config_abi_drift_stops_firmware_and_final_verification(self):
+        self.add_legacy_abi_fixture()
+        self.apply()
+        self.prepare()
+        wifi.update_config(self.config, {'CFG80211_WEXT': 'y'})
+        with self.assertRaisesRegex(ValueError, 'stock wireless ABI'):
+            self.prepare()
+        with self.assertRaisesRegex(ValueError, 'stock wireless ABI'):
+            wifi.verify(self.root, self.config, self.plan_path, self.metadata, self.report)
+
     def firmware_manifest(self, source, drivers, staging, metadata, **kwargs):
         data = b'firmware-test-data'
         target = Path(staging) / 'good.bin'

@@ -1,5 +1,6 @@
 {
   "source": "Native USB WLAN Kconfig and firmware metadata from torvalds/linux v5.10, v5.15, v6.1, v6.6, v6.12 and master; symbols absent from each device source are reported, not backported.",
+  "preserve_abi": ["CFG80211_WEXT", "CFG80211_WEXT_EXPORT", "NL80211_TESTMODE"],
   "required": [
     "NET",
     "NETDEVICES",
