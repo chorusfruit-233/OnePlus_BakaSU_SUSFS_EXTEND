@@ -89,21 +89,24 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 
 ## ✨ Features
 
-- 🔐 **ReSukiSU**: Kernel-based Android Root Solution,forked from sukisu
-- 🥷 **SUSFS**: An addon root hiding kernel patches and userspace module for KernelSU
-- 🛡️ **BBG**: LSM-based Baseband Guard security to protect critical device partitions. abl/efisp can be added to whitelist for efisp exploit devices.
-- 🛠️ **HMBIRD SCX**: Scheduler extensions for SM8750/MT6991 devices
-- 🖧 **BBRv1**: Improved TCP congestion control
-- 🖧 **BBRv3**: Improved TCP congestion control
-- 🚦 **CAKE and PIE qdisc Support**: Better Net Schedulers
-- ✅ **LTO**: Link Time Optimisation enabled
-- 🚀 **Optimisation patches**: Memory, I/O, CPU scheduler, network and other general tunings
-- 🌐 **TTL Target Support**: Network packet manipulation
-- 🧱 **IP Set & IPv6 NAT Support**: Advanced firewall capabilities and IPv6 NAT Support
-- ⚡️ **TMPFS XATTR / POSIX ACL**: Extended TMPFS support for meta modules and Mountify
-- </> **Unicode Bypass Fix**: Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental]
-- 🖥️ **Droidspaces Support**: Support Portable Linux containers to run full Linux environments.
-- 🔃 **NTSync**: Provide high-performance, low-latency synchronization primitives compatible with the Windows NT kernel API
+以下功能面向 **OnePlus 13 / OOS16 / `oneplus_13_w.xml`**。
+
+- 🔐 **ReSukiSU / KernelSU**：默认使用官方 ReSukiSU，也可在 Actions 选择 KernelSU。
+- 🥷 **SUSFS**：集成内核侧支持；配套管理功能需安装对应的 SUSFS 用户空间模块。
+- 📶 **内建 USB WiFi**：当前 6.6.118 构建内建 32 项 USB 网卡驱动及 `cfg80211` / `mac80211` 等依赖，无需额外加载网卡驱动 `.ko`。
+- 📦 **内建无线固件**：当前构建嵌入 67 个固件文件；ZIP 附带驱动覆盖、固件缺失、来源、校验值及许可证报告。具体网卡仍需实测。
+- ✅ **板载 WiFi 兼容修复**：核对 50 个原厂无线符号 CRC，并处理内建 `cfg80211` / `rfkill` 被重复加载的问题；OP13 OOS16 6.6.118 已由用户确认开机 WiFi 正常。
+- 🗂️ **内建 NoMount**：集成固定提交的官方 NoMount，启用 `CONFIG_NOMOUNT` 和 `CONFIG_KEYS`；模块规则及 WebUI 仍需官方 NoMount 元模块。
+- 🔌 **USB DWC3 / OTG**：启用高通 DWC3 与 USB 双角色支持，为 USB 外设提供内核侧支持。
+- 🛡️ **Baseband Guard（BBG）**：集成基于 LSM 的关键分区访问保护。
+- 🛠️ **HMBIRD 调度支持**：集成 OP13 / SM8750 对应的风驰调度补丁。
+- 🌐 **TCP BBR**：启用 BBR 拥塞控制及 FQ / FQ-CoDel 队列支持。
+- 🚀 **ThinLTO 与优化补丁**：使用 ThinLTO，集成内存、I/O、网络等优化；Actions 可选择 O2 或 O3 编译等级。
+- 🧱 **Netfilter 扩展**：集成 TTL / IPv6 Hop Limit、IP Set 与 IPv6 NAT 配置支持。
+- ⚡ **TMPFS XATTR / POSIX ACL**：支持元模块等功能所需的扩展属性和访问控制列表。
+- </> **Unicode 补丁**：保留实验性的 Unicode 路径兼容补丁。
+- 🖥️ **Droidspaces**：集成运行 Linux 容器所需的内核支持，容器管理仍需配套用户空间工具。
+- 🔃 **NTSync**：集成 Windows NT 同步原语支持，供兼容层使用。
 
 ---
 
