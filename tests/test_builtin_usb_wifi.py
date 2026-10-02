@@ -218,6 +218,50 @@ config STOCK_LEGACY_SUPPORT
         with self.assertRaisesRegex(ValueError, 'stock wireless ABI'):
             wifi.verify(self.root, self.config, self.plan_path, self.metadata, self.report)
 
+    def add_testmode_fixture(self):
+        self.add_legacy_abi_fixture()
+        with self.kconfig.open('a') as handle:
+            handle.write('''
+config NL80211_TESTMODE
+    bool "factory test mode"
+    depends on CFG80211
+''')
+        self.profile['preserve_abi'].append('NL80211_TESTMODE')
+
+    def test_factory_reference_restores_option_hidden_by_disabled_gki_core(self):
+        self.add_testmode_fixture()
+        original = self.config.read_text()
+        for os_version, kernel, expected in [('OOS16', 'android15-6.6.118', 'y'),
+                                             ('OOS15', 'android15-6.6.118', 'n'),
+                                             ('OOS16', 'android15-6.6.89', 'n')]:
+            with self.subTest(os_version=os_version, kernel=kernel):
+                self.config.write_text(original)
+                plan = wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
+                                       'OP13', kernel, os_version)
+                self.assertEqual(wifi.read_config(self.config)['NL80211_TESTMODE'], expected)
+                self.assertEqual(plan['abi_preserved']['NL80211_TESTMODE'], expected)
+                self.assertEqual(bool(plan['abi_reference']), expected == 'y')
+
+    def test_factory_reference_does_not_override_unrelated_kernel_options(self):
+        reference = {'system': 'fixture', 'config': {'X86': 'y'}}
+        with patch.object(wifi.vendor_abi, 'selected_references', return_value=[reference]):
+            with self.assertRaisesRegex(ValueError, 'unsupported factory wireless ABI option'):
+                self.apply()
+
+    def test_unavailable_factory_abi_option_fails_instead_of_falling_back(self):
+        self.add_testmode_fixture()
+        with self.kconfig.open('a') as handle:
+            handle.write('''
+config X86
+    bool "wrong architecture"
+''')
+        self.kconfig.write_text(self.kconfig.read_text().replace(
+            'bool "factory test mode"\n    depends on CFG80211',
+            'bool "factory test mode"\n    depends on CFG80211 && X86'))
+        with self.assertRaisesRegex(ValueError, 'cannot preserve wireless ABI CONFIG_NL80211_TESTMODE=y'):
+            wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
+                            'OP13', 'android15-6.6.118', 'OOS16')
+
     def firmware_manifest(self, source, drivers, staging, metadata, **kwargs):
         data = b'firmware-test-data'
         target = Path(staging) / 'good.bin'

@@ -3,7 +3,12 @@
   "os_version": "OOS16",
   "kernel": "6.6.118",
   "system": "PJZ110_16.0.10.501(CN01)",
-  "source": "Factory vendor modules read from user-authorized OnePlus 13; no module binaries included",
+  "source": "Factory vendor modules read from user-authorized OnePlus 13; cfg80211 BTF includes cfg80211_ops.testmode_cmd/testmode_dump at byte offsets 448/456; no module binaries included",
+  "config": {
+    "CFG80211_WEXT": "n",
+    "CFG80211_WEXT_EXPORT": "n",
+    "NL80211_TESTMODE": "y"
+  },
   "cfg80211_sha256": "7c267f40cdbd0046571ee1e827569af776fbfad6432fbf58cdf6abb916f850a6",
   "wlan_sha256": "3a911766120a33a4d52383315495b9446d59e6d67c7d3a100f69a7fdbbefa9ed",
   "symbols": {

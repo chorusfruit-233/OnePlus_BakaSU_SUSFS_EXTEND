@@ -2301,7 +2301,7 @@ runs:
         trap preserve_usb_wifi_metadata EXIT
         "$USB_WIFI_PYTHON" "$WIFI_CONFIG_TOOL" apply \
           --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \
-          --plan "$OUT/usb-wifi/plan.json" --model "$OP_MODEL" --kernel "$KERNEL_FULL_VER"
+          --plan "$OUT/usb-wifi/plan.json" --model "$OP_MODEL" --kernel "$KERNEL_FULL_VER" --os-version "$OP_OS_VERSION"
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" olddefconfig
         "$USB_WIFI_PYTHON" "$WIFI_CONFIG_TOOL" firmware \
           --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config" \

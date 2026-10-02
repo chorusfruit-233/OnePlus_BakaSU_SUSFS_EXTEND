@@ -17,6 +17,7 @@ import subprocess
 
 import kconfiglib as kc
 import usb_wifi_firmware as fw
+import verify_vendor_wifi_abi as vendor_abi
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTING = re.compile(r'^(CONFIG_\w+)=.*$|^# (CONFIG_\w+) is not set$')
@@ -133,7 +134,7 @@ def load_kconfig(source, config):
 
 class DriverPlanner:
     """Promote scoped, positive dependencies; roll back failed candidates."""
-    def __init__(self, kconf, profile):
+    def __init__(self, kconf, profile, abi_config=None):
         self.kconf = kconf
         self.profile = profile
         self.entries = [dict(driver) if isinstance(driver, dict) else {'symbol': driver}
@@ -145,6 +146,10 @@ class DriverPlanner:
         self.baseline = {sym.name: sym.str_value for sym in kconf.unique_defined_syms}
         self.abi_preserved = {name: self.baseline[name] for name in profile.get('preserve_abi', [])
                               if name in self.baseline}
+        for name, value in (abi_config or {}).items():
+            if name not in self.abi_preserved or value not in ('n', 'y'):
+                raise ValueError(f'unsupported factory wireless ABI option CONFIG_{name}={value}')
+            self.abi_preserved[name] = value
         self.preserved = {name for driver in self.entries for name in driver.get('preserve_disabled', [])
                           if self.baseline.get(name) == 'n'}
         self.selected = []
@@ -259,6 +264,14 @@ class DriverPlanner:
         for name in self.profile['required']:
             if not self._enable(self.kconf.syms[name]):
                 raise ValueError(f'cannot build required USB WiFi core CONFIG_{name}=y')
+        # Vendor modules can enable ABI options hidden by a disabled GKI core.
+        # Apply the measured factory values only after enabling that core.
+        for name, value in self.abi_preserved.items():
+            symbol = self.kconf.syms[name]
+            if symbol.str_value != value:
+                symbol.set_value(value)
+            if symbol.str_value != value:
+                raise ValueError(f'cannot preserve wireless ABI CONFIG_{name}={value}')
         results = []
         for driver in self.entries:
             name = driver['symbol']
@@ -326,8 +339,17 @@ class DriverPlanner:
                 'preserved_disabled': sorted(self.preserved)}
 
 
-def apply_plan(source, config, profile, plan_path, model='', version=''):
-    plan = DriverPlanner(load_kconfig(source, config), profile).resolve(model, version or kernel_version(source))
+def apply_plan(source, config, profile, plan_path, model='', version='', os_version=''):
+    version = version or kernel_version(source)
+    references = vendor_abi.selected_references(model, os_version, version)
+    abi_config = {}
+    for reference in references:
+        for name, value in reference.get('config', {}).items():
+            if name in abi_config and abi_config[name] != value:
+                raise ValueError(f'conflicting factory wireless ABI references for CONFIG_{name}')
+            abi_config[name] = value
+    plan = DriverPlanner(load_kconfig(source, config), profile, abi_config).resolve(model, version)
+    plan['abi_reference'] = [reference['system'] for reference in references]
     update_config(config, plan['assignments'])
     write_json(plan_path, plan)
     for note in plan['kconfig_compatibility']:
@@ -488,6 +510,8 @@ def verify(source, config, plan_path, metadata_dir, report, image=None):
     if plan.get('abi_preserved'):
         lines[-1:-1] = ['Stock wireless ABI options preserved:'] + [
             f'CONFIG_{name}={value}' for name, value in plan['abi_preserved'].items()] + ['']
+    if plan.get('abi_reference'):
+        lines[-1:-1] = ['Factory wireless ABI reference: ' + ', '.join(plan['abi_reference']), '']
     for item in plan['drivers']:
         lines.append(f'CONFIG_{item["symbol"]}: {item["status"]}' + (f' — {item["reason"]}' if item['reason'] else ''))
         if item.get('notes'):
@@ -523,6 +547,7 @@ def main():
     parser.add_argument('--plan', type=Path, required=True)
     parser.add_argument('--model', default='')
     parser.add_argument('--kernel', default='')
+    parser.add_argument('--os-version', default='')
     parser.add_argument('--firmware-dir', type=Path)
     parser.add_argument('--metadata-dir', type=Path)
     parser.add_argument('--firmware-lock', type=Path)
@@ -532,7 +557,8 @@ def main():
     args = parser.parse_args()
     try:
         if args.mode == 'apply':
-            apply_plan(args.source, args.config, json.loads(args.profile.read_text()), args.plan, args.model, args.kernel)
+            apply_plan(args.source, args.config, json.loads(args.profile.read_text()), args.plan,
+                       args.model, args.kernel, args.os_version)
         elif args.mode == 'firmware':
             if args.firmware_dir is None or args.metadata_dir is None:
                 parser.error('firmware requires --firmware-dir and --metadata-dir')

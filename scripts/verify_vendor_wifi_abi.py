@@ -31,6 +31,11 @@ def matches(reference, model, os_version, kernel):
             and bool(re.search(r'(?:^|-)' + re.escape(reference['kernel']) + r'(?:$|-)', kernel)))
 
 
+def selected_references(model, os_version, kernel):
+    references = [json.loads(path.read_text()) for path in sorted(REFERENCES.glob('*.json'))]
+    return [ref for ref in references if matches(ref, model, os_version, kernel)]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model', required=True)
@@ -39,8 +44,7 @@ def main():
     parser.add_argument('--symvers', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
-    references = [json.loads(path.read_text()) for path in sorted(REFERENCES.glob('*.json'))]
-    selected = [ref for ref in references if matches(ref, args.model, args.os_version, args.kernel)]
+    selected = selected_references(args.model, args.os_version, args.kernel)
     lines = ['Factory WLAN module ABI check', f'Model: {args.model}', f'Kernel: {args.kernel}']
     failures = []
     if not selected:
