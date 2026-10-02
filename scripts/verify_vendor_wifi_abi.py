@@ -56,7 +56,7 @@ def main():
         except (OSError, ValueError) as error:
             errors = [str(error)]
         failures.extend(errors)
-        lines.extend(errors or [f"PASS: {len(reference['symbols'])} built-in cfg80211 symbol CRCs match factory WLAN module"])
+        lines.extend(errors or [f"PASS: {len(reference['symbols'])} built-in wireless symbol CRCs match factory module requirements"])
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text('\n'.join(lines) + '\n')
     print('\n'.join(lines))

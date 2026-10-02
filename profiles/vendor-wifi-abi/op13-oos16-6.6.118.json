@@ -3,7 +3,7 @@
   "os_version": "OOS16",
   "kernel": "6.6.118",
   "system": "PJZ110_16.0.10.501(CN01)",
-  "source": "Factory vendor modules read from user-authorized OnePlus 13; cfg80211 BTF includes cfg80211_ops.testmode_cmd/testmode_dump at byte offsets 448/456; no module binaries included",
+  "source": "Factory vendor modules read from user-authorized OnePlus 13; cfg80211 BTF includes cfg80211_ops.testmode_cmd/testmode_dump at byte offsets 448/456; no module binaries included; rfkill CRCs from factory cfg80211 imports",
   "config": {
     "CFG80211_WEXT": "n",
     "CFG80211_WEXT_EXPORT": "n",
@@ -54,6 +54,14 @@
     "cfg80211_connect_done": "0xf34f1643",
     "cfg80211_roamed": "0x5dc30400",
     "cfg80211_disconnected": "0x2a918de3",
-    "cfg80211_chandef_create": "0x46ae4ebf"
-  }
+    "cfg80211_chandef_create": "0x46ae4ebf",
+    "rfkill_alloc": "0xeecde6dc",
+    "rfkill_register": "0xff282521",
+    "rfkill_destroy": "0xdb68bbad",
+    "rfkill_unregister": "0x083eb21c",
+    "rfkill_resume_polling": "0xc781bd9f",
+    "rfkill_set_hw_state_reason": "0x0cdce87c",
+    "rfkill_blocked": "0xc0763484"
+  },
+  "builtin_module_compat": true
 }

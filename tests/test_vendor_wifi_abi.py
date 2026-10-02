@@ -49,9 +49,9 @@ class VendorAbiTests(unittest.TestCase):
         self.assertIn('refusing to package', result.stderr)
         self.assertIn('wiphy_register: missing', report.read_text())
 
-    def test_factory_reference_matches_all_43_builtin_exports(self):
+    def test_factory_reference_matches_all_50_builtin_exports(self):
         reference = json.loads((abi.REFERENCES / 'op13-oos16-6.6.118.json').read_text())
-        self.assertEqual(len(reference['symbols']), 43)
+        self.assertEqual(len(reference['symbols']), 50)
         self.symvers.write_text(''.join(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n'
                                        for name, crc in reference['symbols'].items()))
         self.assertEqual(abi.check(reference, self.symvers), [])
