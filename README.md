@@ -1,4 +1,4 @@
-# OnePlus 13 OOS16 内核（USB WiFi / NoMount 内建）
+# OnePlus 13 OOS16 内核（USB WiFi / Hybrid Mount VFS 内建）
 
 主分支 `main` 只维护 OnePlus 13 OOS16，唯一配置为 `configs/oos16/OP13.json`，唯一源码 manifest 为 `manifests/oos16/oneplus_13_w.xml`（OnePlusOSS 分支 `oneplus/sm8750_b_16.0.0_oneplus_13`，android15-6.6，目前已验证 6.6.118）。按该源码尽可能内建 USB 无线网卡驱动、依赖与固件。驱动和 `cfg80211/mac80211` 等依赖以 `=y` 链接进内核 Image；所选驱动可获取的固件通过 `CONFIG_EXTRA_FIRMWARE` 同样链接进 Image，启动后由内核固件加载器直接提供。
 
@@ -24,17 +24,17 @@ python3 -m pip install --target /tmp/usb-wifi-python -r scripts/requirements-usb
 PYTHONPATH=/tmp/usb-wifi-python python3 -m unittest discover -s tests -v
 ```
 
-构建已迁移到 `Baka-SU/BakaSU`，Actions 默认选项、产物名称和提交链接使用 BakaSU，内核版本后缀为 `OP-BAKASU`。原有 USB WiFi、原厂无线 ABI 校验、NoMount 和 SUSFS 集成保留。
+构建已迁移到 `Baka-SU/BakaSU`，Actions 默认选项、产物名称和提交链接使用 BakaSU，内核版本后缀为 `OP-BAKASU`。USB WiFi、原厂无线 ABI 校验及 SUSFS 集成保留，挂载支持改为 Hybrid Mount VFS。
 
-## NoMount 内建支持
+## Hybrid Mount VFS 驱动内建
 
-OP13 OOS16 的 BakaSU / KernelSU 两种构建默认内建 [官方 NoMount](https://github.com/maxsteeel/nomount/tree/c5fad9d8f97c5a207f7342fd91789449915ea047)。源码固定到 `profiles/nomount.json` 的提交，并验证归档 SHA256；按官方手动集成方式接入 `fs/Kconfig` / `fs/Makefile`，启用 `CONFIG_NOMOUNT=y` 和其通信所需的 `CONFIG_KEYS=y`。xattr 回调与 VFS 调用的参数根据该机型实际头文件适配，避免仅按版本号判断厂商回移接口；清单分别记录上游和适配后源码的校验值。
+OP13 OOS16 的 BakaSU / KernelSU 构建内建 [Hybrid Mount 官方 VFS 驱动](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/d531194df11ee621398e66dfc01a52d48ff18f9d/module/vfs)。源码固定在 `profiles/hybridmount.json`，下载归档须通过 SHA256 校验；接入 `fs/hybridmount/`、`fs/Kconfig` 和 `fs/Makefile`，启用 `CONFIG_HYBRIDMOUNT=y`、`CONFIG_KEYS=y`。根据实际内核头文件适配 xattr 参数，保留许可证和源码来源记录。
 
-构建在 `olddefconfig` 后检查配置，编译后检查 `System.map` 中的初始化函数与 key type，以及本次 Image 中的初始化信息；缺失则停止打包。ZIP 和 debug 产物的 `nomount-support/` 包含提交、源码校验值、许可证和验证报告。
+已移除 NoMount 的构建集成。两种驱动不能共存，构建会检查并拒绝遗留的 NoMount 集成。配置阶段检查驱动始终为内建，编译后验证 `hybridmount_init`、`hm_key_type` 和 Image 初始化信息；不符合要求则停止打包。ZIP 和 debug 产物中的 `hybridmount-support/` 保存源码提交、许可证、校验值和验证报告。
 
-刷入后仍需在管理器中安装[官方 NoMount 元模块](https://github.com/maxsteeel/nomount/releases)，用于加载模块规则和提供 WebUI；内建支持无需加载 `nomount.ko`。可用元模块附带的 `nm version` 检查内核通信。OP13 6.6.118 构建已通过 NoMount 配置与 Image 链接检查。
+刷入新内核前卸载原 NoMount 元模块；刷入后安装 [Hybrid Mount 官方元模块](https://github.com/Hybrid-Mount/meta-hybrid_mount/releases)。元模块提供规则、CLI 和 WebUI，选择 VFS 后端后才使用内建驱动；内建驱动不需要加载 `hybridmount.ko`。其 key 类型及协议为 `hybridmount` / `hm1`，不兼容 NoMount 的 `nm` 工具。使用元模块提供的 `hybrid-mount vfs version` 和 `hybrid-mount vfs doctor` 检查版本及内建状态。尚需完整内核构建及真机验证。
 
-同步上游更新时保留 OP13 OOS16 的固定构建范围、固件内建、原厂无线 ABI 检查、NoMount 和 USBWiFi 产物命名。以下保留项目来源、功能和致谢。
+同步上游更新时保留 OP13 OOS16 的固定构建范围、固件内建、原厂无线 ABI 检查、Hybrid Mount VFS 和 USBWiFi 产物命名。以下保留项目来源、功能和致谢。
 
 ---
 
@@ -98,7 +98,7 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 - 📶 **内建 USB WiFi**：当前 6.6.118 构建内建 32 项 USB 网卡驱动及 `cfg80211` / `mac80211` 等依赖，无需额外加载网卡驱动 `.ko`。
 - 📦 **内建无线固件**：当前构建嵌入 67 个固件文件；ZIP 附带驱动覆盖、固件缺失、来源、校验值及许可证报告。具体网卡仍需实测。
 - ✅ **板载 WiFi 兼容修复**：核对 50 个原厂无线符号 CRC，并处理内建 `cfg80211` / `rfkill` 被重复加载的问题；OP13 OOS16 6.6.118 已由用户确认开机 WiFi 正常。
-- 🗂️ **内建 NoMount**：集成固定提交的官方 NoMount，启用 `CONFIG_NOMOUNT` 和 `CONFIG_KEYS`；模块规则及 WebUI 仍需官方 NoMount 元模块。
+- 🗂️ **内建 Hybrid Mount VFS 驱动**：启用 `CONFIG_HYBRIDMOUNT` 和 `CONFIG_KEYS`，由官方 Hybrid Mount 元模块通过 keyring 提供 VFS 规则；无需加载驱动 `.ko`。
 - 🔌 **USB DWC3 / OTG**：启用高通 DWC3 与 USB 双角色支持，为 USB 外设提供内核侧支持。
 - 🛡️ **Baseband Guard（BBG）**：集成基于 LSM 的关键分区访问保护。
 - 🛠️ **HMBIRD 调度支持**：集成 OP13 / SM8750 对应的风驰调度补丁。

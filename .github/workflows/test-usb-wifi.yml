@@ -1,4 +1,4 @@
-name: Validate built-in USB WiFi and NoMount integration
+name: Validate built-in USB WiFi and Hybrid Mount VFS integration
 on:
   push:
     branches: [main]

@@ -1806,18 +1806,18 @@ runs:
             fi
         fi
 
-    - name: Integrate built-in NoMount
+    - name: Integrate built-in Hybrid Mount VFS
       shell: bash
       run: |
         set -euo pipefail
-        NOMOUNT_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_nomount.py"
-        NOMOUNT_LOCK="$GITHUB_WORKSPACE/action-source/profiles/nomount.json"
-        NOMOUNT_URL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["archive_url"])' "$NOMOUNT_LOCK")
-        NOMOUNT_ARCHIVE="$RUNNER_TEMP/nomount-source.tar.gz"
+        HYBRIDMOUNT_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_hybridmount.py"
+        HYBRIDMOUNT_LOCK="$GITHUB_WORKSPACE/action-source/profiles/hybridmount.json"
+        HYBRIDMOUNT_URL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["archive_url"])' "$HYBRIDMOUNT_LOCK")
+        HYBRIDMOUNT_ARCHIVE="$RUNNER_TEMP/hybridmount-source.tar.gz"
         curl --fail --location --proto '=https' --retry 3 --retry-delay 2 \
-          "$NOMOUNT_URL" -o "$NOMOUNT_ARCHIVE"
-        python3 "$NOMOUNT_TOOL" install --source "$COMMON_KERNEL_FOLDER" --archive "$NOMOUNT_ARCHIVE"
-        cp -a "$COMMON_KERNEL_FOLDER/nomount-support" "$DEBUG_ARTIFACTS_FOLDER/"
+          "$HYBRIDMOUNT_URL" -o "$HYBRIDMOUNT_ARCHIVE"
+        python3 "$HYBRIDMOUNT_TOOL" install --source "$COMMON_KERNEL_FOLDER" --archive "$HYBRIDMOUNT_ARCHIVE"
+        cp -a "$COMMON_KERNEL_FOLDER/hybridmount-support" "$DEBUG_ARTIFACTS_FOLDER/"
 
     - name: Add Tmpfs Support
       shell: bash
@@ -2319,8 +2319,8 @@ runs:
           --plan "$OUT/usb-wifi/plan.json" --metadata-dir "$OUT/usb-wifi" \
           --report "$OUT/usb-wifi.config.txt"
         
-        NOMOUNT_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_nomount.py"
-        python3 "$NOMOUNT_TOOL" verify --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config"
+        HYBRIDMOUNT_TOOL="$GITHUB_WORKSPACE/action-source/scripts/builtin_hybridmount.py"
+        python3 "$HYBRIDMOUNT_TOOL" verify --source "$COMMON_KERNEL_FOLDER" --config "$OUT/.config"
 
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
@@ -2399,13 +2399,13 @@ runs:
         "$USB_WIFI_PYTHON" "$GITHUB_WORKSPACE/action-source/scripts/verify_vendor_wifi_abi.py" \
           --model "$OP_MODEL" --os-version "$OP_OS_VERSION" --kernel "$KERNEL_FULL_VER" \
           --symvers "$WIFI_SYMVERS" --report "$OUT/usb-wifi/vendor-abi.txt"
-        python3 "$NOMOUNT_TOOL" verify --source "$COMMON_KERNEL_FOLDER" \
+        python3 "$HYBRIDMOUNT_TOOL" verify --source "$COMMON_KERNEL_FOLDER" \
           --config "$OUT/.config" --system-map "$OUT/System.map" --image "$IMG" \
-          --report "$COMMON_KERNEL_FOLDER/nomount-support/report.txt"
-        cp -a "$COMMON_KERNEL_FOLDER/nomount-support" "$DEBUG_ARTIFACTS_FOLDER/"
+          --report "$COMMON_KERNEL_FOLDER/hybridmount-support/report.txt"
+        cp -a "$COMMON_KERNEL_FOLDER/hybridmount-support" "$DEBUG_ARTIFACTS_FOLDER/"
         {
-          echo '### Built-in NoMount'
-          cat "$COMMON_KERNEL_FOLDER/nomount-support/report.txt"
+          echo '### Built-in Hybrid Mount VFS'
+          cat "$COMMON_KERNEL_FOLDER/hybridmount-support/report.txt"
         } >> "$GITHUB_STEP_SUMMARY"
         cp -a "$OUT/usb-wifi" "$DEBUG_ARTIFACTS_FOLDER/"
         cp "$OUT/usb-wifi.config.txt" "$DEBUG_ARTIFACTS_FOLDER/usb-wifi.config.txt"
@@ -2574,7 +2574,7 @@ runs:
         cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
         cp "$COMMON_KERNEL_FOLDER/out/usb-wifi.config.txt" "$AK3_FOLDER/usb-wifi.config.txt"
         cp -a "$COMMON_KERNEL_FOLDER/out/usb-wifi" "$AK3_FOLDER/"
-        cp -a "$COMMON_KERNEL_FOLDER/nomount-support" "$AK3_FOLDER/"
+        cp -a "$COMMON_KERNEL_FOLDER/hybridmount-support" "$AK3_FOLDER/"
         
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
@@ -2651,7 +2651,7 @@ runs:
           echo "Clean Build: ${{ inputs.clean }}"
           echo ""
           echo "=== OnePlus Features ==="
-          echo "NoMount: built-in; pinned source and linkage report in nomount-support/"
+          echo "Hybrid Mount VFS: built-in; pinned source and linkage report in hybridmount-support/"
           echo "USB WiFi: per-device built-in drivers and firmware (coverage in usb-wifi.config.txt; sources/licenses in usb-wifi/)"
           echo "BBR: ${{ env.OP_BBR }}"
           echo "BBG: ${{ env.OP_BBG }}"
@@ -2719,7 +2719,7 @@ runs:
           echo ""
           echo "| Feature | Status |"
           echo "|---------|--------|"
-          echo "| **NoMount** | Built-in (=y); source, license and linkage report included in ZIP |"
+          echo "| **Hybrid Mount VFS** | Built-in (=y); source, license and linkage report included in ZIP |"
           echo "| **USB WiFi** | Per-device built-in drivers and firmware; coverage, sources and licenses included in ZIP |"
           echo "| **BBR** | ${{ env.OP_BBR }} |"
           echo "| **BBG** | ${{ env.OP_BBG }} |"
