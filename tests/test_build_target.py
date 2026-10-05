@@ -25,7 +25,7 @@ class BuildTargetTests(unittest.TestCase):
         matrix = json.loads(result.stdout)
         self.assertEqual(len(matrix), 1)
         self.assertEqual(target.validate(matrix[0]), matrix[0])
-        self.assertEqual(matrix[0]['uname'], 'OP-RESUKISU')
+        self.assertEqual(matrix[0]['uname'], 'OP-BAKASU')
 
     def test_changed_target_is_rejected(self):
         config = json.loads((ROOT / target.TARGET_CONFIG).read_text())

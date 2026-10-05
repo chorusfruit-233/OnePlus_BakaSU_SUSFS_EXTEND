@@ -1,5 +1,5 @@
-name: 'Build OnePlus Kernel with KernelSU / ReSukiSU'
-description: 'GitHub Action to build OnePlus kernels with original KernelSU or ReSukiSU, and SUSFS integration, optimized for performance and reliability'
+name: 'Build OnePlus Kernel with KernelSU / BakaSU'
+description: 'GitHub Action to build OnePlus kernels with original KernelSU or BakaSU, and SUSFS integration, optimized for performance and reliability'
 inputs:
   op_config_json:
     description: 'JSON string containing full device config'
@@ -11,7 +11,7 @@ inputs:
     type: choice
     options:
       - KSU
-      - ReSukiSU
+      - BakaSU
   ksu_branch_or_hash:
     description: 'KSU branch or commit hash (empty = auto-detect by ksu_type)'
     required: false
@@ -973,23 +973,31 @@ runs:
         echo "✅ KernelSU added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
-    - name: Add ReSukiSU (The Sukisaku Project)
+    - name: Add BakaSU
       shell: bash
-      if: ${{ inputs.ksu_type == 'ReSukiSU' }}
+      if: ${{ inputs.ksu_type == 'BakaSU' }}
+      env:
+        BAKASU_REF: ${{ inputs.ksu_branch_or_hash }}
       run: |
         set -euo pipefail
-        echo "::group::Add ReSukiSU"
+        echo "::group::Add BakaSU"
         cd "$KERNEL_PLATFORM_FOLDER"
-        echo "Adding ReSukiSU..."
+        echo "Adding BakaSU..."
         
-        if [ "${{ inputs.ksu_branch_or_hash }}" = "" ]; then
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -
-        else
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s "${{ inputs.ksu_branch_or_hash }}"
-        fi
-        
+        BAKASU_REF="${BAKASU_REF:-main}"
+        curl --fail --location --proto '=https' -LSs \
+          "https://raw.githubusercontent.com/Baka-SU/BakaSU/$BAKASU_REF/kernel/setup.sh" \
+          -o "$RUNNER_TEMP/bakasu-setup.sh"
+        bash "$RUNNER_TEMP/bakasu-setup.sh" "$BAKASU_REF"
+
         cd KernelSU
-        
+        # setup.sh can fall back when checkout fails; never package that fallback.
+        BAKASU_EXPECTED_SHA=$(git rev-parse "$BAKASU_REF^{commit}")
+        if [ "$(git rev-parse HEAD)" != "$BAKASU_EXPECTED_SHA" ]; then
+          echo "::error::BakaSU checkout differs from requested ref $BAKASU_REF"
+          exit 1
+        fi
+
         BASE_VERSION=30700
         KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
         
@@ -998,12 +1006,12 @@ runs:
         
         cd ..
         
-        echo "ReSukiSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "BakaSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
         echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
         echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
         
-        echo "ReSukiSU Version: $KSU_VERSION"
-        echo "✅ ReSukiSU added (commit: ${KSU_COMMIT_SHA:0:8})"
+        echo "BakaSU Version: $KSU_VERSION"
+        echo "✅ BakaSU added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
     - name: Apply SUSFS Patches
@@ -1039,7 +1047,7 @@ runs:
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             else
-              echo "ℹ️ Skipping KernelSU folder patch for ReSukiSU"
+              echo "ℹ️ Skipping KernelSU folder patch for BakaSU"
             fi
             ;;
           "v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12"|"v2.0.0"|"v2.1.0")
@@ -1047,7 +1055,7 @@ runs:
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             else
-              echo "ℹ️ Skipping KernelSU folder patch for ReSukiSU"
+              echo "ℹ️ Skipping KernelSU folder patch for BakaSU"
             fi
             ;;
           "v2.2.0"|"v2.3.0")
@@ -1055,7 +1063,7 @@ runs:
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             else
-              echo "ℹ️ Skipping KernelSU folder patch for ReSukiSU"
+              echo "ℹ️ Skipping KernelSU folder patch for BakaSU"
             fi
             ;;
           *)
@@ -1166,14 +1174,8 @@ runs:
           fi
         fi
 
-        if [ "${{ inputs.ksu_type }}" = "ReSukiSU" ]; then
-          exec_file="./fs/exec.c"
-          sed -i '/extern int ksu_install_su_fd(void);/d; /^[[:space:]]*ksu_install_su_fd();$/d' "$exec_file"
-          if grep -Fq 'ksu_install_su_fd' "$exec_file"; then
-            echo "::error::Failed to remove unsupported ReSukiSU ksu_install_su_fd() call"
-            exit 1
-          fi
-        fi
+        # BakaSU implements ksu_install_su_fd() and detects the SUSFS direct
+        # call in tools/susfs_compat.mk. Preserve it so su session setup runs once.
 
         # SUSFS targets the newer four-argument API, while some OnePlus 5.10
         # trees still expose the original three-argument set_nameidata().
@@ -2245,7 +2247,7 @@ runs:
         
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" gki_defconfig
         
-        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--OP-RESUKISU}"
+        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--OP-BAKASU}"
         if [ -n "${LOCAL_LOCALVERSION:-}" ]; then
           scripts/config --file "$OUT/.config" --set-str LOCALVERSION "${LOCAL_LOCALVERSION}"
           scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO || true
@@ -2634,9 +2636,9 @@ runs:
           echo "Kernel Uname: ${{ env.KERNEL_UNAME }}"
           echo "Build User: ${{ env.BUILD_USER }}"
           echo "Build Host: ${{ env.BUILD_HOST }}"
-          if [ "${{ inputs.ksu_type }}" = "ReSukiSU" ]; then
-            echo "ReSukiSU Version: ${KSUVER:-unknown}"
-            echo "ReSukiSU commit SHA: ${KSU_SHA:-unknown}"
+          if [ "${{ inputs.ksu_type }}" = "BakaSU" ]; then
+            echo "BakaSU Version: ${KSUVER:-unknown}"
+            echo "BakaSU commit SHA: ${KSU_SHA:-unknown}"
           else
             echo "KSU Version: ${KSUVER:-unknown}"
             echo "KSU commit SHA: ${KSU_SHA:-unknown}"
@@ -2686,15 +2688,15 @@ runs:
           echo "| **Build User** | ${{ env.BUILD_USER }} |"
           echo "| **Build Host** | ${{ env.BUILD_HOST }} |"
           
-          if [ "${{ inputs.ksu_type }}" = "ReSukiSU" ]; then
-            echo "| **ReSukiSU Version** | ${KSUVER:-unknown} |"
+          if [ "${{ inputs.ksu_type }}" = "BakaSU" ]; then
+            echo "| **BakaSU Version** | ${KSUVER:-unknown} |"
           else
             echo "| **KSU Version** | ${KSUVER:-unknown} |"
           fi
           
           if [ "$KSU_SHA" != "unknown" ]; then
-            if [ "${{ inputs.ksu_type }}" = "ReSukiSU" ]; then
-              echo "| **ReSukiSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/ReSukiSU/ReSukiSU/commit/$KSU_SHA) |"
+            if [ "${{ inputs.ksu_type }}" = "BakaSU" ]; then
+              echo "| **BakaSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/Baka-SU/BakaSU/commit/$KSU_SHA) |"
             else
               echo "| **KSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/tiann/KernelSU/commit/$KSU_SHA) |"
             fi
