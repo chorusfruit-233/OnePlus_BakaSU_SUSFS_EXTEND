@@ -55,8 +55,12 @@ def ensure_no_nomount(source, config):
 
 
 def install(source, archive, lock):
-    if digest(archive.read_bytes()) != lock["sha256"]:
+    # Legacy pins verify the downloaded archive. Newer official releases are
+    # pinned to GitHub's exact source blobs, avoiding reliance on gzip metadata.
+    if lock.get("sha256") and digest(archive.read_bytes()) != lock["sha256"]:
         raise ValueError("Hybrid Mount source archive SHA256 mismatch")
+    if not lock.get("sha256") and not lock.get("source_blobs"):
+        raise ValueError("Hybrid Mount source pin missing both archive and blob hashes")
     root = "meta-hybrid_mount-" + lock["revision"]
     # Read only the explicitly required regular files; never extract paths or links.
     contents = {}
@@ -66,6 +70,13 @@ def install(source, archive, lock):
             if not member.isfile():
                 raise ValueError(f"Hybrid Mount source is not a regular file: {name}")
             contents[name] = tar.extractfile(member).read()
+            if lock.get("source_blobs"):
+                expected = lock["source_blobs"].get(name)
+                if not expected:
+                    raise ValueError(f"Hybrid Mount source blob missing from lock: {name}")
+                blob = b"blob " + str(len(contents[name])).encode() + b"\\x00" + contents[name]
+                if hashlib.sha1(blob).hexdigest() != expected:
+                    raise ValueError(f"Hybrid Mount source blob mismatch: {name}")
     contents["Makefile"] = b'obj-$(CONFIG_HYBRIDMOUNT) += hybridmount.o\nccflags-y += -std=gnu11 -Wno-declaration-after-statement\n'
     upstream_hashes = {name: digest(contents[name]) for name in FILES}
     xattr_api = adapt_xattr(contents, source)
