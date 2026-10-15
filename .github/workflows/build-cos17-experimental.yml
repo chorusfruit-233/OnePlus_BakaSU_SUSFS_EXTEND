@@ -1,0 +1,27 @@
+name: Experimental ColorOS 17 Kernel Build
+on:
+  push:
+    branches: ['work/cos17-pinned-bakasu-hybridmount-623']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build-cos17:
+    permissions:
+      contents: write
+      actions: write
+    uses: ./.github/workflows/build-kernel-release.yml
+    with:
+      os_target: cos17
+      make_release: false
+      ksu_type: BakaSU
+      ksu_branch_or_hash: c9246641b9eee8b9986050e8bf1832f88da880c2
+      android15-6_6_susfs_branch_or_commit: a0f9c59e2243f8a5db955f4ad1686d5e0ad26e1a
+      optimize_level: O2
+      clean_build: false
+      debug: true
+      mirror_toolchains: false
+      build_timestamp: ''
