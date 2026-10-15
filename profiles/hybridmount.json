@@ -1,6 +1,14 @@
 {
   "repository": "https://github.com/Hybrid-Mount/meta-hybrid_mount",
-  "revision": "d531194df11ee621398e66dfc01a52d48ff18f9d",
-  "archive_url": "https://codeload.github.com/Hybrid-Mount/meta-hybrid_mount/tar.gz/d531194df11ee621398e66dfc01a52d48ff18f9d",
-  "sha256": "c1c56755b3f2db9f09381f94a9d067518cd120349a873dcf1b9b6b97d8341278"
+  "revision": "b7e928831cbca5a10cc0d1e671081aeb1e9efb1e",
+  "version": "v6.2.3",
+  "archive_url": "https://codeload.github.com/Hybrid-Mount/meta-hybrid_mount/tar.gz/b7e928831cbca5a10cc0d1e671081aeb1e9efb1e",
+  "source_blobs": {
+    "Kconfig": "dc7dc17a65537e34c65bfca3e704bdd5ad9aa419",
+    "LICENSE": "d159169d1050894d3ea3b98e1c965c4058208fe1",
+    "PROVENANCE": "6c16b7c36caab21843fa6a526c3115f748a635cd",
+    "UPSTREAM_README.md": "0643a6441730dcb613fb44e6f0210add5f4e3c26",
+    "hybridmount.c": "a46c01e003ca96c5d3d0550886d39962f818808e",
+    "hybridmount.h": "cd58d80f555b332f42d10dfceb040f374c69083a"
+  }
 }
