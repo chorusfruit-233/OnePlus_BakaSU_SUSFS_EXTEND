@@ -48,7 +48,8 @@ def main():
     lines = ['Factory WLAN module ABI check', f'Model: {args.model}', f'Kernel: {args.kernel}']
     failures = []
     if not selected:
-        lines.append('No matching factory symbol reference; only wireless configuration guards verified separately.')
+        lines.append('ERROR: no matching factory wireless ABI reference; refusing to package.')
+        failures.append('no factory wireless ABI reference for requested model, OS and kernel')
     for reference in selected:
         lines.append('Factory system: ' + reference['system'])
         try:
