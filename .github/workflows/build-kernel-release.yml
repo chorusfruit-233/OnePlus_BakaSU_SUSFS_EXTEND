@@ -1,4 +1,4 @@
-name: Build OnePlus 13 OOS16 (Built-in USB WiFi)
+name: Build OnePlus 13 OOS16 / ColorOS17 (Built-in USB WiFi)
 
 permissions:
   contents: write
@@ -7,6 +7,12 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      os_target:
+        description: 'Select system target (COS17 is experimental)'
+        required: true
+        type: choice
+        options: [cos17, oos16]
+        default: cos17
       make_release:
         description: 'Do you want to create a release?'
         required: true
@@ -21,9 +27,9 @@ on:
           - KSU
         default: BakaSU
       ksu_branch_or_hash:
-        description: 'KSU branch or commit hash'
+        description: 'Pinned compatible BakaSU commit (2026-10-07 successful build)'
         type: string
-        default: 'main'
+        default: 'c9246641b9eee8b9986050e8bf1832f88da880c2'
       optimize_level:
         description: "Compiler optimization level"
         required: true
@@ -49,9 +55,42 @@ on:
         type: string
         default: ''
       android15-6_6_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android15-6.6'
+        description: 'Pinned successful SUSFS commit for android15-6.6'
+        type: string
+        default: 'a0f9c59e2243f8a5db955f4ad1686d5e0ad26e1a'
+
+  workflow_call:
+    inputs:
+      os_target:
+        type: string
+        default: cos17
+      make_release:
+        type: boolean
+        default: false
+      ksu_type:
+        type: string
+        default: BakaSU
+      ksu_branch_or_hash:
+        type: string
+        default: 'c9246641b9eee8b9986050e8bf1832f88da880c2'
+      optimize_level:
+        type: string
+        default: O2
+      clean_build:
+        type: boolean
+        default: false
+      debug:
+        type: boolean
+        default: false
+      mirror_toolchains:
+        type: boolean
+        default: false
+      build_timestamp:
         type: string
         default: ''
+      android15-6_6_susfs_branch_or_commit:
+        type: string
+        default: 'a0f9c59e2243f8a5db955f4ad1686d5e0ad26e1a'
 
 jobs:
   set-op-model:
@@ -72,7 +111,9 @@ jobs:
         with:
           sparse-checkout: |
             configs/oos16/OP13.json
+            configs/cos17/OP13.json
             manifests/oos16/oneplus_13_w.xml
+            manifests/cos17/oneplus_13_w.xml
             scripts/build_target.py
           sparse-checkout-cone-mode: false
 
@@ -85,7 +126,7 @@ jobs:
           
           ksu_type="${{ inputs.ksu_type }}"
           ksu_hash="${{ inputs.ksu_branch_or_hash }}"
-          python3 scripts/build_target.py --root "$GITHUB_WORKSPACE" > matrix.json
+          python3 scripts/build_target.py --target "${{ inputs.os_target }}" --root "$GITHUB_WORKSPACE" > matrix.json
           filtered=$(jq -c '.' matrix.json)
           count=$(jq 'length' matrix.json)
 
@@ -300,7 +341,7 @@ jobs:
           
           merged_matrix=$(echo "$merged_matrix" | jq '
             sort_by(
-              (.os_version | gsub("OOS"; "") | tonumber? // 0) * -1,
+              (.os_version | gsub("OOS|COS"; "") | tonumber? // 0) * -1,
               .model
             )
           ')
@@ -347,7 +388,7 @@ jobs:
             cat << 'EOF'
           ## 🎯 Build Plan
           
-          **Target:** OP13 / OOS16 / oneplus_13_w.xml
+          **Target:** OP13 / ${{ inputs.os_target }} / oneplus_13_w.xml
           **Devices:** ${{ steps.set-matrix.outputs.count }}  
           
           **Configuration:**
