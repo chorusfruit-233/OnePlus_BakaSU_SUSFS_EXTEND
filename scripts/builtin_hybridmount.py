@@ -74,7 +74,7 @@ def install(source, archive, lock):
                 expected = lock["source_blobs"].get(name)
                 if not expected:
                     raise ValueError(f"Hybrid Mount source blob missing from lock: {name}")
-                blob = b"blob " + str(len(contents[name])).encode() + b"\\x00" + contents[name]
+                blob = b"blob " + str(len(contents[name])).encode() + b"\x00" + contents[name]
                 if hashlib.sha1(blob).hexdigest() != expected:
                     raise ValueError(f"Hybrid Mount source blob mismatch: {name}")
     contents["Makefile"] = b'obj-$(CONFIG_HYBRIDMOUNT) += hybridmount.o\nccflags-y += -std=gnu11 -Wno-declaration-after-statement\n'
