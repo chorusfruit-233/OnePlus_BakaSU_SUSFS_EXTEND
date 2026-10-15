@@ -215,8 +215,8 @@ runs:
         
         if [[ -z "$os_version" ]]; then
           errors+=("Input 'os_version' cannot be empty")
-        elif [[ ! "$os_version" =~ ^OOS ]]; then
-          errors+=("Input 'os_version' does not start with 'OOS'. Got: '$os_version'")
+        elif [[ "$os_version" != "OOS16" && "$os_version" != "COS17" ]]; then
+          errors+=("Unsupported OP13 system target: '$os_version' (allowed: OOS16, COS17)")
         fi
         
         if [[ -z "$hmbird" ]]; then
@@ -1381,6 +1381,10 @@ runs:
           # keeps OOS naming everywhere else, so translate OOS<NN> -> A<NN> only
           # for the fengchi filename lookup against the upstream patches repo.
           HMBIRD_OS="${OP_OS_VERSION/OOS/A}"
+          if [ "$OP_OS_VERSION" = "COS17" ]; then
+            # COS17 uses the validated OOS16 GKI 6.6.118 source baseline.
+            HMBIRD_OS="A16"
+          fi
           HMBIRD_PATCH="$FENGCHI_DIR/fengchi_${HMBIRD_MODEL}_${HMBIRD_OS}.patch"
           if [ ! -f "$HMBIRD_PATCH" ] && [ "$FENGCHI_DIR" = "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/deprecated" ]; then
             echo "Deprecated HMBIRD patch is unavailable; falling back to the current patch set."
