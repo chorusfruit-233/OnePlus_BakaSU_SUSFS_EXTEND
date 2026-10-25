@@ -28,13 +28,15 @@ PYTHONPATH=/tmp/usb-wifi-python python3 -m unittest discover -s tests -v
 
 ## Hybrid Mount VFS 驱动内建
 
-OP13 OOS16 的 BakaSU / KernelSU 构建内建 [Hybrid Mount 官方 VFS 驱动](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/d531194df11ee621398e66dfc01a52d48ff18f9d/module/vfs)。源码固定在 `profiles/hybridmount.json`，下载归档须通过 SHA256 校验；接入 `fs/hybridmount/`、`fs/Kconfig` 和 `fs/Makefile`，启用 `CONFIG_HYBRIDMOUNT=y`、`CONFIG_KEYS=y`。根据实际内核头文件适配 xattr 参数，保留许可证和源码来源记录。
+OP13 OOS16 的 BakaSU / KernelSU 构建内建 [Hybrid Mount 官方 VFS 驱动](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/89f328fd945c72794a6505d779f6d85834d131a3/module/vfs)。源码固定在 `profiles/hybridmount.json`，下载归档须通过 SHA256 校验；接入 `fs/hybridmount/`、`fs/Kconfig` 和 `fs/Makefile`，启用 `CONFIG_HYBRIDMOUNT=y`、`CONFIG_KEYS=y`。根据实际内核头文件适配 xattr 参数，保留许可证和源码来源记录。
 
 已移除 NoMount 的构建集成。两种驱动不能共存，构建会检查并拒绝遗留的 NoMount 集成。配置阶段检查驱动始终为内建，编译后验证 `hybridmount_init`、`hm_key_type` 和 Image 初始化信息；不符合要求则停止打包。ZIP 和 debug 产物中的 `hybridmount-support/` 保存源码提交、许可证、校验值和验证报告。
 
 刷入新内核前卸载原 NoMount 元模块；刷入后安装 [Hybrid Mount 官方元模块](https://github.com/Hybrid-Mount/meta-hybrid_mount/releases)。元模块提供规则、CLI 和 WebUI，选择 VFS 后端后才使用内建驱动；内建驱动不需要加载 `hybridmount.ko`。其 key 类型及协议为 `hybridmount` / `hm1`，不兼容 NoMount 的 `nm` 工具。使用元模块提供的 `hybrid-mount vfs version` 和 `hybrid-mount vfs doctor` 检查版本及内建状态。尚需完整内核构建及真机验证。
 
 同步上游更新时保留 OP13 OOS16 的固定构建范围、固件内建、原厂无线 ABI 检查、Hybrid Mount VFS 和 USBWiFi 产物命名。以下保留项目来源、功能和致谢。
+
+上游同步与全部构建依赖的核对结果见 [依赖状态](docs/dependency-status.md)。GitHub Actions 和 Python 依赖由 Dependabot 每周检查，内核源码、BakaSU、SUSFS 和补丁继续按所选分支跟进。
 
 ---
 

@@ -1,10 +1,10 @@
 {
   "repository": "https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware",
   "upstream": "https://gitlab.com/kernel-firmware/linux-firmware.git",
-  "release": "20260910",
-  "revision": "eeccccbe83daf22e1931e3557ba05b2c02427e4e",
-  "root_tree": "cdad904845f5fa2424e5c889cb8d7c84eb2f3440",
-  "whence_sha256": "8bc466434be59e1c044cb3821b30b7328859ca250a451bb6c799ffb21ae47f2e",
+  "release": "20261019",
+  "revision": "a2dcb924f0897368b0b4f305cbf9808cdda90ce0",
+  "root_tree": "ea229fdd0fd5f4f8fdacd95330a0ba698d54de4d",
+  "whence_sha256": "0dd59e46f1e5d33d112236b17cb6de9d8f46fbf8fd09685cb474eb70a55f4da1",
   "extra_sources": [
     {
       "name": "wireless-regdb",

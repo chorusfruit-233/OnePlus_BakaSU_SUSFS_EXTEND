@@ -143,7 +143,7 @@ jobs:
     steps:
       - name: 📊 Analyze Repository Health
         id: analysis
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -459,7 +459,7 @@ jobs:
     
     steps:
       - name: 🗑️ Smart Cache Cleanup
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -781,7 +781,7 @@ jobs:
     
     steps:
       - name: 🗑️ Clean old workflow runs
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -940,7 +940,7 @@ jobs:
     
     steps:
       - name: 📊 Final Repository Health Report
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;

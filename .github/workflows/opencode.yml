@@ -31,7 +31,7 @@ jobs:
       has_updates: ${{ steps.check.outputs.has_updates }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -80,7 +80,7 @@ jobs:
       actions: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -96,6 +96,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_PROMPT: ${{ github.event.inputs.prompt }}
         run: |
+          set -euo pipefail
           echo "::group::Configuring Git"
           git config user.name "opencode"
           git config user.email "opencode@anomaly.co"
@@ -110,7 +111,7 @@ jobs:
             echo "::group::Automatic Upstream Merge"
             git remote add upstream https://github.com/WildKernels/OnePlus_KernelSU_SUSFS.git
             git -c http.extraHeader="" fetch --no-tags upstream main
-            git merge upstream/main --no-edit || echo "Merge conflicts detected (expected)"
+            git merge --no-ff --no-commit upstream/main || echo "Merge conflicts detected (expected)"
             echo "::endgroup::"
 
             echo "::group::Auto-resolve merge conflicts (split by ownership)"
@@ -132,7 +133,7 @@ jobs:
             #   * Fork-owned docs take OURS without agent review.
             #   * Everything else (device configs, manifests, kernel sources) takes
             #     UPSTREAM; sanitize.py below re-applies the deterministic fork
-            #     transforms (uname -> OP-BAKASU, AnyKernel3 URL, oos* naming).
+            #     transforms; maintain_target.py then enforces the current OP13 scope.
             git ls-files -u 2>/dev/null | awk '{print $4}' | sort -u | while IFS= read -r f; do
               [ -z "$f" ] && continue
               case "$f" in
@@ -165,6 +166,8 @@ jobs:
           # Count distinct conflicted files (git ls-files -u lists 3 stage rows per file).
           CONFLICT_COUNT=$(git ls-files -u 2>/dev/null | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
           python3 .github/opencode/sanitize.py
+          python3 scripts/maintain_target.py --root "$GITHUB_WORKSPACE"
+          python3 scripts/maintain_target.py --root "$GITHUB_WORKSPACE" --check
 
           if [ "$CONFLICT_COUNT" -eq 0 ]; then
             git add -A
@@ -220,6 +223,7 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_TEST_CHAT_ID || secrets.TG_CHAT_ID }}
         run: |
+          set -euo pipefail
           CONFLICTS=$(git ls-files -u 2>/dev/null | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
           if [ "$CONFLICTS" -gt 0 ]; then
             echo "has_conflicts=true" >> "$GITHUB_OUTPUT"
@@ -227,6 +231,9 @@ jobs:
             echo "::error::Deterministic upstream merge left $CONFLICTS conflict file(s); refusing the agent path because it would flatten upstream ancestry."
             exit 1
           fi
+
+          # This path can skip the agent entirely, so enforce its invariants too.
+          python3 scripts/maintain_target.py --root "$GITHUB_WORKSPACE" --check
 
           AHEAD=$(git rev-list --count origin/main..HEAD)
           echo "Commits ahead of origin/main: $AHEAD"
@@ -310,6 +317,10 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_PROMPT: ${{ github.event.inputs.prompt }}
         run: |
+          set -euo pipefail
+          append_guidelines() {
+            python3 scripts/maintain_target.py --root "$GITHUB_WORKSPACE" --guidelines
+          }
           TASK_DESC="Synchronizing upstream and resolving conflicts."
           if [[ "$EVENT_NAME" == "schedule" || ( "$EVENT_NAME" == "workflow_dispatch" && ( "$DISPATCH_PROMPT" == "" || "$DISPATCH_PROMPT" == "null" ) ) ]]; then
             {
@@ -325,7 +336,7 @@ jobs:
                 echo "====================================="
                 echo ""
               fi
-              cat .github/opencode/guidelines.txt
+              append_guidelines
             } > final_prompt.txt
           elif [[ "$EVENT_NAME" == "issue_comment" || "$EVENT_NAME" == "pull_request_review_comment" ]]; then
             TASK_DESC="Processing user request from comment."
@@ -351,12 +362,12 @@ jobs:
               echo ""; 
               echo "Please fulfill the user's request while strictly adhering to these guidelines:"; 
               echo ""; 
-              cat .github/opencode/guidelines.txt; 
+              append_guidelines;
             } > final_prompt.txt
             rm -f user_comment.txt
           elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$DISPATCH_PROMPT" != "" ]]; then
             TASK_DESC="Processing manual workflow dispatch prompt."
-            { printf '%s\n' "$DISPATCH_PROMPT"; echo ""; echo "---"; cat .github/opencode/guidelines.txt; } > final_prompt.txt
+            { printf '%s\n' "$DISPATCH_PROMPT"; echo ""; echo "---"; append_guidelines; } > final_prompt.txt
           else
             echo "" > final_prompt.txt
           fi
@@ -390,7 +401,7 @@ jobs:
       - name: Run opencode
         id: agent
         if: steps.merge-check.outputs.skip_agent != 'true'
-        uses: anomalyco/opencode/github@latest
+        uses: anomalyco/opencode/github@v1.19.4
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
@@ -438,7 +449,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -523,7 +534,7 @@ jobs:
       actions: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Prepare & Send TG Message

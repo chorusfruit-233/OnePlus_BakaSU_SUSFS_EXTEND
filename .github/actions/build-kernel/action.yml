@@ -98,7 +98,7 @@ runs:
         echo "ACTION_REF=$ACTION_REF_VAL" >> $GITHUB_ENV
 
     - name: 📥 Checkout Code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7.0.1
       with:
         repository: ${{ env.ACTION_REPO }}
         ref: ${{ env.ACTION_REF }}
@@ -118,7 +118,7 @@ runs:
         printf 'PYTHONPATH=%s\n' "$USB_WIFI_PYTHON_DEPS${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
 
     - name: Cache pinned USB WiFi firmware objects
-      uses: actions/cache@v4
+      uses: actions/cache@v6.1.0
       with:
         path: ${{ runner.temp }}/usb-wifi-firmware-cache
         key: usb-wifi-firmware-v1-${{ runner.os }}-${{ hashFiles('action-source/profiles/usb-wifi-firmware.json') }}
@@ -2770,7 +2770,7 @@ runs:
 
     - name: Upload Debug Artifacts
       if: ${{ always() && !cancelled() && inputs.debug == 'true' }}
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.2
       with:
         name: ${{ env.DEBUG_ZIP_NAME }}
         path: ${{ env.DEBUG_ARTIFACTS_FOLDER }}
@@ -2779,7 +2779,7 @@ runs:
 
     - name: Upload Artifacts
       if: success() && steps.create_zip.conclusion == 'success'
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.2
       with:
         name: ${{ env.ZIP_NAME }}
         path: ${{ env.ARTIFACTS_FOLDER }}/${{ env.ZIP_NAME }}
@@ -2789,7 +2789,7 @@ runs:
 
     - name: Upload ccache log
       if: success() && inputs.debug == 'true' && steps.build_kernel_step.conclusion == 'success'
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.2
       with:
         name: "${{ env.OP_MODEL }}_${{ env.OP_OS_VERSION }}_${{ env.KERNEL_FULL_VER }}_ccache.log"
         path: ${{ env.CCACHE_LOGFILE }}
@@ -2798,7 +2798,7 @@ runs:
         retention-days: 90
 
     - name: 📥 Checkout Code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7.0.1
       if: always() && steps.build_kernel_step.conclusion == 'success'
       with:
         path: main-source

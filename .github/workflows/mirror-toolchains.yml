@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -51,7 +51,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: Generate Mirror Matrix
         id: generate-config
@@ -77,12 +77,12 @@ jobs:
               configs = json.load(f)
           
           unique_toolchains = {}
+          # Branch-based AnyKernel3 is fetched directly, never frozen in this cache.
           TOOLCHAIN_MAP = {
               "clang/host/linux-x86": "clang",
               "prebuilts/rust": "rust",
               "prebuilts/clang-tools": "clang-tools",
-              "prebuilts/build-tools": "build-tools",
-              "AnyKernel3": "AnyKernel3"
+              "prebuilts/build-tools": "build-tools"
           }
           
           print(f"Processing {len(configs)} configurations...")

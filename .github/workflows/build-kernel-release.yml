@@ -68,7 +68,7 @@ jobs:
       GH_HTTP_TIMEOUT: 600
     steps:
       - name: 📥 Checkout Code (to access configs/)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           sparse-checkout: |
             configs/oos16/OP13.json
@@ -315,7 +315,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload build matrix
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: build-matrix
           path: matrix.json
@@ -437,7 +437,7 @@ jobs:
           fi
           echo "::endgroup::"
       - name: Upload ccache artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ccache-binary
           path: ccache
@@ -510,7 +510,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload shared SUSFS archives
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: susfs-archives
           path: susfs-archives/*.tar.gz
@@ -534,7 +534,7 @@ jobs:
       ksu_ver: ${{ steps.build-stat.outputs.ksu_version }}
     steps:
       - name: 📥 Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
 
@@ -556,7 +556,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Get prebuilt ccache (downloaded once by prepare_ccache)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.2
         with:
           name: ccache-binary
           path: ccache-dl
@@ -581,7 +581,7 @@ jobs:
 
       - name: Get shared SUSFS archives
         if: ${{ matrix.susfs }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.2
         with:
           name: susfs-archives
           path: susfs-archives
@@ -811,7 +811,7 @@ jobs:
       RELEASE_NAME: 'USBWiFi Built-in — OnePlus Kernels With ${{ inputs.ksu_type }} & SUSFS ${{ needs.set-op-model.outputs.susfs_base_version }}'
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -825,7 +825,7 @@ jobs:
           git push origin "$NEW_TAG"
 
       - name: 📥 Download Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.2
         with:
           path: ./downloaded-artifacts
           merge-multiple: true

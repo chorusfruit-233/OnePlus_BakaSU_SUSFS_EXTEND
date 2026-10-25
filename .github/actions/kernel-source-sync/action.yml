@@ -45,17 +45,16 @@ runs:
         import time
         import glob
         from concurrent.futures import ThreadPoolExecutor
-        import requests
         
         MAX_WORKERS = (os.cpu_count() or 2) * 4
         NPROC = int(subprocess.check_output("nproc", shell=True).strip())
         TARGET_REPO = "${{ github.repository }}"
+        # Cache only versioned toolchains; fetch AnyKernel3's branch on every sync.
         TOOLCHAIN_MAP = {
             "clang/host/linux-x86": "clang",
             "prebuilts/rust": "rust",
             "prebuilts/clang-tools": "clang-tools",
-            "kernel/prebuilts/build-tools": "build-tools",
-            "AnyKernel3": "AnyKernel3"
+            "kernel/prebuilts/build-tools": "build-tools"
         }
         DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
         aria_quiet_flags = "--quiet --summary-interval=0" if not DEBUG else ""

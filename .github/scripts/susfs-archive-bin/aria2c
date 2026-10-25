@@ -32,9 +32,30 @@ for ((i = 0; i < ${#args[@]}; i++)); do
 done
 
 susfs_prefix="https://gitlab.com/simonpunk/susfs4ksu/-/archive/"
+susfs_api_prefix="https://gitlab.com/api/v4/projects/simonpunk%2Fsusfs4ksu/repository/archive.tar.gz?"
+ref=""
+is_susfs=false
 if [[ "$url" == "${susfs_prefix}"* ]]; then
+  is_susfs=true
   ref="${url#${susfs_prefix}}"
   ref="${ref%%/*}"
+elif [[ "$url" == "${susfs_api_prefix}"* ]]; then
+  is_susfs=true
+  query="${url#*\?}"
+  IFS='&' read -ra query_parts <<< "$query"
+  for part in "${query_parts[@]}"; do
+    if [[ "$part" == sha=* ]]; then
+      ref="${part#sha=}"
+    fi
+  done
+fi
+
+if [[ "$is_susfs" == true ]]; then
+  # Shared archives are keyed by the commit resolved before the build matrix.
+  if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "::error::SUSFS aria2 shim requires a resolved commit SHA" >&2
+    exit 2
+  fi
   archive="${GITHUB_WORKSPACE}/susfs-archives/susfs4ksu-${ref}.tar.gz"
 
   if [[ -z "$out" ]]; then
