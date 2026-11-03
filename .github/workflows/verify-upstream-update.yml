@@ -196,6 +196,8 @@ jobs:
           names = [step.get("name") for step in steps]
           assert names.index("Validate complete release asset set") < names.index("🏷️ Generate and Create New Tag")
           step = next(step for step in steps if step.get("name") == "Validate complete release asset set")
-          code = step["run"].replace("${{ needs.set-op-model.outputs.device_count }}", "1")
+          placeholder = "$" + "{{ needs.set-op-model.outputs.device_count }}"
+          assert placeholder in step["run"]
+          code = step["run"].replace(placeholder, "1")
           subprocess.run(["bash", "-euo", "pipefail", "-c", code], check=True)
           print("RAW_ARTIFACT_DOWNLOAD_AND_RELEASE_VALIDATION_OK")
