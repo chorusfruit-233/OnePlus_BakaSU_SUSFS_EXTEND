@@ -1,0 +1,118 @@
+name: Upstream update verification
+on:
+  push:
+    branches: [maintenance/upstreams-20261103]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Check native dependency releases and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import base64, hashlib, json, os, re, time, urllib.parse, urllib.request
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          
+          report = {"checked_at": "2026-11-03", "errors": {}}
+          def get(url):
+              headers = {"User-Agent": "OnePlus-OP13-upstream-audit", "Accept": "*/*"}
+              if url.startswith("https://api.github.com/"):
+                  headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
+              last = None
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=45) as response:
+                          return response.read()
+                  except Exception as error:
+                      last = error
+                      if attempt < 2:
+                          time.sleep(2)
+              raise last
+          
+          def json_get(url):
+              raw = get(url).decode()
+              if raw.startswith(")]}'"):
+                  raw = raw.split("\n", 1)[1]
+              return json.loads(raw)
+          
+          def audit(key, action):
+              try:
+                  report[key] = action()
+              except Exception as error:
+                  report["errors"][key] = str(error)
+              print("AUDIT_PROGRESS " + key, flush=True)
+          
+          def firmware():
+              lock = json.loads(Path("profiles/usb-wifi-firmware.json").read_text())
+              base = lock["repository"]
+              refs = json_get(base + "/+refs/tags?format=JSON")
+              releases = sorted(name.removeprefix("refs/tags/") for name in refs if re.fullmatch(r"(?:refs/tags/)?20\d{6}", name))
+              latest = releases[-1]
+              commit = json_get(base + "/+/" + latest + "?format=JSON")
+              whence = base64.b64decode(get(base + "/+/" + latest + "/WHENCE?format=TEXT"))
+              return {"release": latest, "revision": commit["commit"], "root_tree": commit["tree"],
+                      "whence_sha256": hashlib.sha256(whence).hexdigest(), "previous": lock["release"]}
+          
+          def susfs():
+              base = "https://gitlab.com/api/v4/projects/simonpunk%2Fsusfs4ksu/repository"
+              ref = json_get(base + "/branches/gki-android15-6.6")["commit"]["id"]
+              header = get(base + "/files/kernel_patches%2Finclude%2Flinux%2Fsusfs.h/raw?ref=" + ref).decode()
+              return {"revision": ref, "version": re.search(r'#define\s+SUSFS_VERSION\s+"([^"]+)"', header)[1]}
+          
+          def regdb():
+              base = "https://www.kernel.org/pub/software/network/wireless-regdb/"
+              releases = sorted(set(re.findall(r"wireless-regdb-(20\d{2}\.\d{2}\.\d{2})\.tar\.xz", get(base).decode())))
+              release = releases[-1]
+              raw = get(base + "wireless-regdb-" + release + ".tar.xz")
+              return {"release": release, "sha256": hashlib.sha256(raw).hexdigest()}
+          
+          def manifest():
+              url = "https://raw.githubusercontent.com/OnePlusOSS/kernel_manifest/refs/heads/oneplus/sm8750/oneplus_13_b.xml"
+              root = ET.fromstring(get(url))
+              return [{"name": p.get("name"), "path": p.get("path"), "revision": p.get("revision")}
+                      for p in root.findall("project") if "prebuilts" in p.get("name", "")]
+          
+          def hybrid():
+              lock = json.loads(Path("profiles/hybridmount.json").read_text())
+              sha = hashlib.sha256(get(lock["archive_url"])).hexdigest()
+              assert sha == lock["sha256"], "Hybrid Mount archive checksum mismatch"
+              return {"revision": lock["revision"], "sha256_verified": True}
+          
+          audit("firmware", firmware)
+          audit("susfs", susfs)
+          audit("regdb", regdb)
+          audit("official_toolchains", manifest)
+          audit("hybridmount", hybrid)
+          for package in ("kconfiglib", "PyYAML", "requests"):
+              audit("pypi_" + package, lambda name=package: json_get("https://pypi.org/pypi/" + name + "/json")["info"]["version"])
+          
+          def clang_releases():
+              releases = json_get("https://api.github.com/repos/ZyCromerZ/Clang/releases?per_page=100")
+              tags = [r["tag_name"] for r in releases]
+              newest = releases[0]["tag_name"]
+              def key(tag):
+                  match = re.match(r"(\d+)\.(\d+)\.(\d+)", tag)
+                  return tuple(map(int, match.groups())) if match else (0, 0, 0)
+              return {"newest_by_date": newest, "highest_version": max(tags, key=key)}
+          audit("ZyC", clang_releases)
+          
+          Path("upstream-audit.json").write_text(json.dumps(report, indent=2) + "\n")
+          print("UPSTREAM_AUDIT=" + json.dumps(report, sort_keys=True), flush=True)
+      - name: Install test dependencies
+        run: python3 -m pip install -r scripts/requirements-usb-wifi.txt PyYAML==6.0.3
+      - name: Run regression suite
+        run: python3 -m unittest discover -s tests -v
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: upstream-audit
+          path: upstream-audit.json
