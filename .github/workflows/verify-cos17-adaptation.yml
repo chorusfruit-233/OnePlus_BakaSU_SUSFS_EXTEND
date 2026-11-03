@@ -1,0 +1,118 @@
+name: Verify ColorOS17 adaptation
+on:
+  push:
+    branches: [verify/cos17-20261103]
+permissions:
+  contents: write
+  actions: write
+jobs:
+  regression:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install -r scripts/requirements-usb-wifi.txt PyYAML==6.0.3
+      - name: Check workflows and both target guards
+        shell: python
+        run: |
+          import ast, pathlib, re, subprocess, yaml
+          blocks = 0
+          for path in sorted(pathlib.Path('.github').rglob('*.yml')):
+              obj = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+              def visit(node):
+                  global blocks
+                  if isinstance(node, dict):
+                      if isinstance(node.get('run'), str):
+                          code = re.sub(r'\$\{\{[\s\S]*?\}\}', 'expression', node['run'])
+                          shell = node.get('shell', 'bash')
+                          if shell.startswith('python'):
+                              ast.parse(code, filename=str(path))
+                          elif shell in ('bash', 'sh') or shell.startswith('bash '):
+                              result = subprocess.run(['bash', '-n'], input=code, text=True, capture_output=True)
+                              if result.returncode:
+                                  raise ValueError(str(path) + ': ' + result.stderr)
+                              blocks += 1
+                      for child in node.values():
+                          visit(child)
+                  elif isinstance(node, list):
+                      for child in node:
+                          visit(child)
+              visit(obj)
+          build = yaml.load(pathlib.Path('.github/workflows/build-kernel-release.yml').read_text(), Loader=yaml.BaseLoader)
+          for event in ('workflow_call', 'workflow_dispatch'):
+              assert build['on'][event]['inputs']['os_target']['default'] == 'oos16'
+              assert build['on'][event]['inputs']['ksu_branch_or_hash']['default'] == 'main'
+              assert build['on'][event]['inputs']['android15-6_6_susfs_branch_or_commit']['default'] == ''
+          wrapper = yaml.load(pathlib.Path('.github/workflows/build-cos17-experimental.yml').read_text(), Loader=yaml.BaseLoader)
+          verification = yaml.load(pathlib.Path('.github/workflows/verify-cos17-adaptation.yml').read_text(), Loader=yaml.BaseLoader)
+          for key in ('uses', 'with'):
+              assert wrapper['jobs']['build-cos17'][key] == verification['jobs']['kernel'][key]
+          subprocess.run(['python3', 'scripts/maintain_target.py', '--check'], check=True)
+          for target in ('oos16', 'cos17'):
+              subprocess.run(['python3', 'scripts/build_target.py', '--target', target], check=True)
+          print('WORKFLOW_AND_BOTH_TARGETS_OK bash_blocks=' + str(blocks))
+      - name: Run full regression suite
+        run: python3 -m unittest discover -s tests -v
+  kernel:
+    needs: regression
+    uses: ./.github/workflows/build-kernel-release.yml
+    with:
+      os_target: cos17
+      make_release: false
+      ksu_type: BakaSU
+      ksu_branch_or_hash: main
+      android15-6_6_susfs_branch_or_commit: ''
+      optimize_level: O2
+      clean_build: false
+      debug: false
+      mirror_toolchains: false
+      build_timestamp: ''
+  artifacts:
+    needs: [regression, kernel]
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install PyYAML==6.0.3
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: matrix.json
+          path: downloaded-artifacts
+          skip-decompress: true
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: 'AK3_OP13_COS17_*_USBWiFi.zip'
+          path: downloaded-artifacts
+          merge-multiple: true
+          skip-decompress: true
+      - name: Validate the actual COS17 release contents
+        shell: python
+        run: |
+          import json, pathlib, subprocess, zipfile, yaml
+          directory = pathlib.Path('downloaded-artifacts')
+          matrix = json.loads((directory / 'matrix.json').read_text())
+          assert len(matrix) == 1 and matrix[0]['os_version'] == 'COS17'
+          subprocess.run(['python3', 'scripts/validate_release_assets.py', '--directory', str(directory), '--expected', '1'], check=True)
+          archive, = directory.glob('AK3_OP13_COS17_*_USBWiFi.zip')
+          with zipfile.ZipFile(archive) as package:
+              abi = package.read('usb-wifi/vendor-abi.txt').decode()
+              assert 'PJZ110_17.0.0.103(CN01)' in abi
+              assert 'PASS: 50' in abi
+              assert 'not independently audited' in abi
+              hybrid = package.read('hybridmount-support/report.txt').decode()
+              assert 'System.map and Image linkage verified' in hybrid
+              assert '89f328fd945c72794a6505d779f6d85834d131a3' in hybrid
+          workflow = yaml.load(pathlib.Path('.github/workflows/build-kernel-release.yml').read_text(), Loader=yaml.BaseLoader)
+          steps = workflow['jobs']['trigger-release']['steps']
+          names = [step.get('name') for step in steps]
+          assert names.index('Validate complete release asset set') < names.index('🏷️ Generate and Create New Tag')
+          print('COS17_REAL_ARTIFACTS_AND_RELEASE_ORDER_OK')
