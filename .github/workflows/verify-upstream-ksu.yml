@@ -1,0 +1,18 @@
+name: Verify upstream KernelSU compatibility
+on:
+  push:
+    branches: [maintenance/upstreams-20261103]
+permissions:
+  contents: write
+  actions: write
+jobs:
+  verify-ksu:
+    uses: ./.github/workflows/build-kernel-release.yml
+    with:
+      make_release: false
+      ksu_type: 'KSU'
+      ksu_branch_or_hash: 'main'
+      optimize_level: 'O2'
+      clean_build: true
+      debug: false
+      mirror_toolchains: false

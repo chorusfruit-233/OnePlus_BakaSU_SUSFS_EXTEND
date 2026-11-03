@@ -1380,7 +1380,7 @@ runs:
           echo "Patching hmbird!"
           HMBIRD_MODEL=$(echo "$OP_MODEL" | sed 's/-[0-9]\+\.[0-9]\+\.[0-9]\+$//')
           case "$OP_MODEL" in
-            OP-ACE-5-ULTRA-6.6.50|OP-ACE-5-PRO-6.6.30|OP13-6.6.30|OP13-CPH-6.6.56|OP13T-6.6.89|OP13-6.6.89|OP-ACE-5-PRO-6.6.89|OP-PAD-2-PRO-6.6.89|OP-PAD-3-SM8750-6.6.89|OP-ACE-5-ULTRA-6.6.89|OP-ACE-6-6.6.89)
+            OP-ACE-5-ULTRA-6.6.50|OP-ACE-5-PRO-6.6.30|OP13-6.6.30|OP13-CPH-6.6.56|OP13S-6.6.89|OP13T-6.6.89|OP13-6.6.89|OP-ACE-5-PRO-6.6.89|OP-PAD-2-PRO-6.6.89|OP-PAD-3-SM8750-6.6.89|OP-ACE-5-ULTRA-6.6.89|OP-ACE-6-6.6.89)
               FENGCHI_DIR="$KERNEL_PATCHES_FOLDER/oneplus/hmbird/deprecated" ;;
             *)
               FENGCHI_DIR="$KERNEL_PATCHES_FOLDER/oneplus/hmbird" ;;
@@ -2040,6 +2040,7 @@ runs:
         CONFIG_NETFILTER_XT_TARGET_LOG=y
         CONFIG_NETFILTER_XT_MATCH_RECENT=y
         CONFIG_USER_NS=y
+        CONFIG_MACVLAN=y
         EOF
         
         patch -p1 < "$KERNEL_PATCHES_FOLDER/common/droidspaces/0001-Guard-USER_NS-for-non-root-users.patch"

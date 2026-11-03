@@ -3,9 +3,12 @@ on:
   push:
     branches: [maintenance/upstreams-20261103]
 permissions:
-  contents: read
+  contents: write
+  actions: write
 jobs:
   audit:
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -109,6 +112,35 @@ jobs:
           print("UPSTREAM_AUDIT=" + json.dumps(report, sort_keys=True), flush=True)
       - name: Install test dependencies
         run: python3 -m pip install -r scripts/requirements-usb-wifi.txt PyYAML==6.0.3
+      - name: Validate workflows and maintained target
+        shell: python
+        run: |
+          import ast, pathlib, re, subprocess, yaml
+          root = pathlib.Path(".")
+          blocks = 0
+          for path in sorted(root.glob(".github/**/*.yml")):
+              obj = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+              def visit(node):
+                  global blocks
+                  if isinstance(node, dict):
+                      if isinstance(node.get("run"), str):
+                          code = re.sub(r"\$\{\{[\s\S]*?\}\}", "expression", node["run"])
+                          shell = node.get("shell", "bash")
+                          if shell.startswith("python"):
+                              ast.parse(code, filename=str(path))
+                          elif shell in ("bash", "sh") or shell.startswith("bash "):
+                              result = subprocess.run(["bash", "-n"], input=code, text=True, capture_output=True)
+                              if result.returncode:
+                                  raise ValueError(str(path) + ": " + result.stderr)
+                              blocks += 1
+                      for child in node.values():
+                          visit(child)
+                  elif isinstance(node, list):
+                      for child in node:
+                          visit(child)
+              visit(obj)
+          print("WORKFLOW_SYNTAX_OK bash_blocks=" + str(blocks))
+          subprocess.run(["python3", "scripts/maintain_target.py", "--check"], check=True)
       - name: Run regression suite
         run: python3 -m unittest discover -s tests -v
       - uses: actions/upload-artifact@v7.0.2
@@ -116,3 +148,14 @@ jobs:
         with:
           name: upstream-audit
           path: upstream-audit.json
+  verify-bakasu:
+    needs: audit
+    uses: ./.github/workflows/build-kernel-release.yml
+    with:
+      make_release: false
+      ksu_type: 'BakaSU'
+      ksu_branch_or_hash: 'main'
+      optimize_level: 'O2'
+      clean_build: true
+      debug: false
+      mirror_toolchains: false

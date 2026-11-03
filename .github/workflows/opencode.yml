@@ -26,7 +26,7 @@ jobs:
   check-upstream:
     name: Check Upstream for Updates
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_updates: ${{ steps.check.outputs.has_updates }}
     steps:
@@ -64,7 +64,7 @@ jobs:
           (github.event_name == 'issue_comment' && github.event.comment.user.type != 'Bot' && (contains(github.event.comment.body, ' /oc') || startsWith(github.event.comment.body, '/oc') || contains(github.event.comment.body, ' /opencode') || startsWith(github.event.comment.body, '/opencode'))) ||
           (github.event_name == 'pull_request_review_comment' && github.event.comment.user.type != 'Bot' && (contains(github.event.comment.body, ' /oc') || startsWith(github.event.comment.body, '/oc') || contains(github.event.comment.body, ' /opencode') || startsWith(github.event.comment.body, '/opencode')))
         )
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # NOTE: opencode's `opencode github run` emits ~21 lines of internal
     # INFO (#NNNN) telemetry/pino logs that CANNOT be suppressed from this
     # workflow — verified in CI that LOG_LEVEL, OPENCODE_LOG_LEVEL and
@@ -401,7 +401,7 @@ jobs:
       - name: Run opencode
         id: agent
         if: steps.merge-check.outputs.skip_agent != 'true'
-        uses: anomalyco/opencode/github@v1.19.4
+        uses: anomalyco/opencode/github@v1.19.5
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
@@ -442,7 +442,7 @@ jobs:
   auto-mirror:
     name: Auto-Mirror Toolchains
     if: github.event_name == 'pull_request' && startsWith(github.event.pull_request.head.ref, 'opencode/')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: write
       contents: read
@@ -481,7 +481,7 @@ jobs:
     needs: [auto-mirror]
     # always(): still run the build even if auto-mirror failed/was skipped.
     if: always() && github.event_name == 'pull_request' && startsWith(github.event.pull_request.head.ref, 'opencode/')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     permissions:
       actions: write
@@ -525,7 +525,7 @@ jobs:
     name: Report and Auto-Fix
     needs: [trigger-test-build]
     if: always() && github.event_name == 'pull_request' && startsWith(github.event.pull_request.head.ref, 'opencode/')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: write

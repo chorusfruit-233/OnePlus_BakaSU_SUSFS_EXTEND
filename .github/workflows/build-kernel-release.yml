@@ -5,6 +5,44 @@ permissions:
   actions: write
 
 on:
+  workflow_call:
+    inputs:
+      make_release:
+        type: boolean
+        required: false
+        default: false
+      ksu_type:
+        type: string
+        required: false
+        default: 'BakaSU'
+      ksu_branch_or_hash:
+        type: string
+        required: false
+        default: 'main'
+      optimize_level:
+        type: string
+        required: false
+        default: 'O2'
+      clean_build:
+        type: boolean
+        required: false
+        default: false
+      debug:
+        type: boolean
+        required: false
+        default: false
+      mirror_toolchains:
+        type: boolean
+        required: false
+        default: false
+      build_timestamp:
+        type: string
+        required: false
+        default: ''
+      android15-6_6_susfs_branch_or_commit:
+        type: string
+        required: false
+        default: ''
   workflow_dispatch:
     inputs:
       make_release:
@@ -55,7 +93,7 @@ on:
 
 jobs:
   set-op-model:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       device_count: ${{ steps.set-matrix.outputs.count }}
@@ -408,7 +446,7 @@ jobs:
 
   prepare_ccache:
     name: Prepare ccache binary (download once)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # Download the custom ccache binary ONCE for the whole matrix and share it as
       # an artifact. Previously every parallel matrix job curl'd the same GitHub raw
@@ -448,7 +486,7 @@ jobs:
     name: Prepare SUSFS archives (download once)
     needs: set-op-model
     if: ${{ needs.set-op-model.outputs.active_gki_keys != '' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download active SUSFS archives once
         env:
@@ -526,7 +564,7 @@ jobs:
       needs.set-op-model.result == 'success' &&
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       (needs.prepare_susfs.result == 'success' || needs.prepare_susfs.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix) }}
@@ -797,7 +835,7 @@ jobs:
 
   trigger-release:
     needs: [set-op-model, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: |
       !cancelled() &&
       inputs.make_release == true &&
