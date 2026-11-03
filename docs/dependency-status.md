@@ -1,50 +1,59 @@
-截至 2026-10-25，本次已同步 WildKernels 上游到 `ce52f331beea06a0c693ec58cb1b62a08446f5ac`，保留真实合并历史。合入 SUSFS 2.3.0 支持、GitLab API 归档下载及逐次降低连接数的重试逻辑。项目仍只维护 OP13 / OOS16 / Android 15 / 6.6.118；未引入上游新增的其他机型。
+截至 2026-11-03，已核对 WildKernels 主上游及全部构建依赖。本轮同步目标为 `11821d9e122629d0888382f588954ef79ee88af6`，相对上次已合并的 `ce52f331beea06a0c693ec58cb1b62a08446f5ac` 新增 12 个提交；同步提交保留上游合并历史。
 
-本次固定依赖的处理结果：
+同时核对直接父仓库 Huangdihd 的 `797e00bdc50698e6ebfbeac736a5fe713cf819d2`。在单 OP13 范围内合入 namespace 补丁上下文恢复、精确保留产物型号和发布前产物校验；仅针对其他 SoC 的 BBG efisp 选择菜单不引入 OP13。继续保留新版 BakaSU 的 `ksu_install_su_fd()` 原生集成，不恢复父仓库中针对旧实现的删除逻辑。
 
-| 依赖 | 当前版本或提交 | 处理 |
+当前构建范围仍为 OP13 / OOS16 / Android 15 / Linux 6.6.118。应用上游的 Ubuntu 24.04 runner 固定、Droidspaces 的 `CONFIG_MACVLAN=y` 和 HMBIRD 分支修正；新机型的配置与 manifest、其他 Android/内核版本专用的补丁上下文调整不在维护范围内，未恢复已经删除的目标或 kernel-monitor 工作流。USB WiFi 驱动、固件内建、Hybrid Mount VFS 与原厂无线 ABI 检查继续保留。
+
+固定依赖的核对结果：
+
+| 依赖 | 当前版本或提交 | 本轮处理 |
 | --- | --- | --- |
-| Hybrid Mount VFS | `89f328fd945c72794a6505d779f6d85834d131a3` | 更新源码及归档 SHA256；保留 `hybridmount` / `hm1` 协议 |
-| linux-firmware | `20261019` / `a2dcb924f0897368b0b4f305cbf9808cdda90ce0` | 更新稳定发布、Git 根树与 WHENCE 校验值 |
-| wireless-regdb | `2026.09.03` | 已是最新发布；保留 `2023.09.01` 以匹配旧内核信任证书 |
-| ZD1211 firmware | `1.5` | 已是最新发布，保留固定归档和 SHA256 |
-| kconfiglib | `14.1.0` | 已是 PyPI 最新版本 |
-| actions/checkout | `v7.0.1` | 更新 |
-| actions/cache | `v6.1.0` | 更新 |
-| actions/setup-python | `v7.1.0` | 更新；测试解释器仍使用 Python 3.12 |
-| actions/github-script | `v9.0.0` | 更新；已核对 Node 24 和现有脚本用法 |
-| actions/upload-artifact | `v7.0.2` | 统一最终产物与共享中间产物版本 |
-| actions/download-artifact | `v8.0.2` | 与上传端统一 |
-| anomalyco/opencode/github | `v1.19.4` | 从 `latest` 改为明确发布版本，后续由 Dependabot 跟进；其内部 CLI 仍由该 Action 自行安装 |
+| Hybrid Mount VFS | `89f328fd945c72794a6505d779f6d85834d131a3` | 上游未变化；重新验证归档 SHA256，保留 `hybridmount` / `hm1` 协议 |
+| linux-firmware | `20261019` / `a2dcb924f0897368b0b4f305cbf9808cdda90ce0` | 仍为最新稳定发布；重新核对 Git 根树与 WHENCE SHA256 |
+| wireless-regdb | `2026.09.03` | 仍为最新发布，归档 SHA256 核对通过；保留 `2023.09.01` 以匹配旧内核信任证书 |
+| ZD1211 firmware | `1.5` | 保留现有官方固件包与 SHA256 |
+| kconfiglib | `14.1.0` | 仍为 PyPI 最新版本 |
+| actions/checkout | `v7.0.1` | 仍为当前发布版 |
+| actions/cache | `v6.1.0` | 仍为当前发布版 |
+| actions/setup-python | `v7.1.0` | 仍为当前发布版；测试解释器使用 Python 3.12 |
+| actions/github-script | `v9.0.0` | 仍为当前发布版 |
+| actions/upload-artifact | `v7.0.2` | 共享中间产物和最终产物使用同一上传版本 |
+| actions/download-artifact | `v8.0.2` | 与上传端配套 |
+| anomalyco/opencode/github | `v1.19.5` | 从 v1.19.4 更新；Action 输入及实现兼容，其内部 CLI 继续由上游 Action 安装 |
 
-以下源码已经在每次构建时解析或下载所选分支，核对时的上游提交如下。它们不会因为本次审计而改成固定快照，用户指定的分支或提交仍然生效。
+以下源码在每次构建时按所选分支解析或下载，本轮核对的提交如下。审计快照不替代用户选择的分支或提交。
 
-| 依赖 | 跟踪分支 | 本次核对的提交 |
+| 依赖 | 跟踪分支 | 本轮核对的提交 |
 | --- | --- | --- |
-| Baka-SU/BakaSU | `main` | `d5e9e025b8b49155f8014684d64c91742b465f65` |
-| tiann/KernelSU | `main` | `528bafc5696196f3a9500cee2e7e18497421cd32` |
-| simonpunk/susfs4ksu | `gki-android15-6.6` | `c51cd8aad3f7e2f8c48bc3bda88cc68cf7d82895`（v2.3.0） |
-| WildKernels/kernel_patches | `main` | `159a8f3b93af582b07d0d44bfa7d08b96d667ec0` |
-| vc-teahouse/Baseband-guard | `main` | `a54e0dc6cf0aff4dd87fec49644a02d2eb612905` |
-| huangdihd/AnyKernel3 | `gki-2.0` | `ea531d03965f702a45e1b0ab7c5db8d196c975c3` |
-| OnePlusOSS common kernel | `oneplus/sm8750_b_16.0.0_oneplus_13` | `e1b346b6b4f4096eb342ae3684838a942fd6f6c4` |
-| OnePlusOSS modules/device tree | `oneplus/sm8750_b_16.0.0_oneplus_13` | `d50b305f7da9e14715a25120a4ac7b1a4b8b97c3` |
+| Baka-SU/BakaSU | `main` | `516d3e87fbc986ccefdde2c2765f1700612441a9` |
+| tiann/KernelSU | `main` | `28db74f6f4692e97006ce9ebd8b19b9cc614b5b7` |
+| simonpunk/susfs4ksu | `gki-android15-6.6` | `c7f670f57b7d43d75066b6657f8aee9cdf580d96`（v2.3.0） |
+| WildKernels/kernel_patches | `main` | `ee68218dc83b3e488ae619eb82e868859e8eb17d` |
+| vc-teahouse/Baseband-guard | `main` | `028ff7fd509e2104596da7cc1ef8e6ce2a0c9082` |
+| huangdihd/AnyKernel3 | `gki-2.0` | `ea531d03965f702a45e1b0ab7c5db8d196c975c3`（未变化） |
+| OnePlusOSS common kernel | `oneplus/sm8750_b_16.0.0_oneplus_13` | `e1b346b6b4f4096eb342ae3684838a942fd6f6c4`（未变化） |
+| OnePlusOSS modules/device tree | `oneplus/sm8750_b_16.0.0_oneplus_13` | `d50b305f7da9e14715a25120a4ac7b1a4b8b97c3`（未变化） |
 
-Droidspaces、NTSync、调度及优化补丁通过 `kernel_patches` 跟进，本次核对的 OP13 活跃分支所引用补丁均存在。AnyKernel3 已移出静态工具链缓存，每次构建直接同步分支，避免 `AnyKernel3-gki-2.0.tar.gz` 的旧缓存遮蔽上游更新。SUSFS 仍按构建开始时解析的提交统一下载一次并供矩阵复用；本次同时适配新的 API URL 与旧归档 URL。
+BakaSU 本轮新增 SELinux inode/BTF 兼容处理；内建模式继续使用目标内核的类型布局。Droidspaces、NTSync、调度及优化补丁通过 `kernel_patches` 跟进；自定义 ccache 二进制也跟随该仓库，每轮矩阵只下载一次，下载失败时保留 apt 回退。BBG 继续由官方 setup 脚本集成。AnyKernel3 每次直接同步所选分支；SUSFS 按构建开始时解析的提交下载一次并在构建矩阵中复用，API 与旧归档 URL 的共享归档适配保留。namespace 恢复仅接受一个已知头文件/声明 hunk；额外功能改动、多个 hunk 或不符合预期的锚点都保留 `.rej`，继续走原有错误输出。
 
-以下版本继续保持兼容约束：
+兼容约束：
 
-- OnePlus `kernel-build-tools`：`434f141b6d22a773a163fa9c707b19b4d254d989`；Android Clang 预编译工具：`b099698c583b8361ca771f3cc8d6af6f729f39b3`。两者仍与最新官方 OP13 manifest 一致，未用 CodeLinaro 通用分支的其他提交替换。
-- 默认 ZyC Clang：`19.0.0git-20240723-release`。仓库按发布时间的 `latest` 实际为 Clang 14，直接跟随会降级；最高版本 Clang 23 为开发构建。本次保持已验证工具链，未将开发构建直接用于发布。
-- 原厂无线 ABI 参考仍限定 `PJZ110_16.0.10.501(CN01)` / 6.6.118。其 CRC 与结构布局来自原厂模块，系统更新后需要对应原厂模块重新建立参考。
-- 当前配置关闭 Rust 构建，未启用新的 Rust、bindgen 或其他机型专用依赖。
+- OnePlus `kernel-build-tools` 固定 `434f141b6d22a773a163fa9c707b19b4d254d989`；Android Clang 预编译工具固定 `b099698c583b8361ca771f3cc8d6af6f729f39b3`。本轮再次与官方 OP13 manifest 核对一致。官方完整 Android 构建树中的 JDK、测试工具及其他未使用预编译项目未引入当前直接 make 构建。
+- 默认 ZyC Clang 保持 `19.0.0git-20240723-release`。最新发布顺序指向 Clang 14，而最高数字版本 Clang 23 为开发构建；本轮使用现有工具链验证新的依赖组合。
+- 原厂无线 ABI 参考仍限定 `PJZ110_16.0.10.501(CN01)` / 6.6.118。系统或内核版本改变后，仍需相应原厂模块重新建立参考。
+- Rust 构建仍关闭；不启用 Rust、bindgen 或其他机型专用依赖。
 
-`.github/dependabot.yml` 每周跟进工作流、构建 composite action 的 GitHub Actions 依赖和 `scripts/requirements-usb-wifi.txt`。WildKernels 上游同步可通过 `opencode` 工作流留空 prompt 手动触发；原有 schedule 处于注释状态，本次保持现有触发频率。固件和 Hybrid Mount 使用经过校验的固定快照，更新时需要同步校验值、协议兼容检查及实际内核验证。
+发布时按 `archive: false` 的实际文件名分别下载 `matrix.json` 和 `AK3_*_USBWiFi.zip` artifacts，使用 `skip-decompress: true` 保留原始文件，排除共享构建工具和 debug 内容；创建标签前验证矩阵数量、目标对应关系、ZIP CRC、非空 `Image` 与 `anykernel.sh`，避免发布外层 artifact ZIP 或留下缺失产物的标签。独立的 `usb-wifi-*` 预发布命名仍保留。
 
-上游自动合并保留两亲历史，在旧 sanitizer 后执行 `scripts/maintain_target.py`：先验证维护目标，再清除恢复的其他机型并校正 BakaSU 命名。无需 agent 的快速 PR 路径也会只读校验这些约束。传给维护 agent 的旧指令会适配当前品牌及单目标要求，用户原始请求和 `.github/opencode/` 内文件保持原样。
+BakaSU 35252 及当前后续版本已由 ksud 从 `/data/adb/ksu/.susfs.json` 恢复 SUSFS 配置。旧版自动生成的 `susfs_manager` v1.0.2 模块可能仍携带旧 uname 和日志开关，在 ksud 之后覆盖运行值；它的“请勿删除”说明属于旧版模板。遇到配置文件不变、重启后 uname 回退时，先停用旧模块并验证；其中需要保留的自定义规则应备份或迁移到当前管理方式。
 
-本地 Ubuntu 开发环境的 requests 从 2.32.5 更新为 2.34.2；PyYAML 6.0.3、kconfiglib 14.1.0 已为最新。构建源码同步脚本未使用的 requests 导入已删除，避免 CI 引入隐式依赖。
+`.github/dependabot.yml` 继续每周跟进 GitHub Actions 与 `scripts/requirements-usb-wifi.txt`。WildKernels 同步可在 `opencode` 工作流中留空 prompt 手动触发，原有注释的 schedule 不变。同步流程保留两亲合并历史，并在旧 sanitizer 后执行 `scripts/maintain_target.py`；快速 PR 路径也校验单 OP13 目标和 BakaSU 命名。`.github/opencode/` 内文件保持原样。
 
-新版 Hybrid Mount 已在真实 OP13 6.6.118 源码上完成 GKI 配置与单对象编译，确认 `hybridmount_init`、`hm_key_type` 符号存在。新固件版本经真实 Kconfig → olddefconfig → 固件准备 → olddefconfig → verify 流程，保留 32 项内建驱动、67 个固件文件，WEXT / NL80211 配置保持原厂 ABI 约束。与旧版本对照，已覆盖固件及 25 项未覆盖请求均未变化，覆盖仍为 `partial`。
+本轮验证使用 GitHub Actions 的 Ubuntu 24.04 runner。云执行环境不可用，因此未将上次的本地主机或 Docker 检查冒充本轮验证。元数据与校验和审计见[审计运行](https://github.com/chorusfruit-233/OnePlus_BakaSU_SUSFS_EXTEND/actions/runs/41698415381)。
 
-主机与 Ubuntu 容器的 91 项仓库回归测试全部通过；工作流 YAML、87 个 Bash 块、内嵌 Python、Action 输入参数与 ARM64 工具链检查通过。尚未构建完整内核 Image，也未执行编译产物的厂商模块 ABI 或真机启动验证。
+本轮验证结果：
+
+- [回归与发布流程验证](https://github.com/chorusfruit-233/OnePlus_BakaSU_SUSFS_EXTEND/actions/runs/41706275378)：102 项测试通过，工作流 YAML、嵌入的 Bash/Python 和单 OP13 目标检查通过；实际下载原始矩阵及 BakaSU 刷机 ZIP 后，产物数量、目标、内容和 CRC 校验通过，并验证校验步骤位于创建标签之前。
+- [BakaSU 35257 完整构建](https://github.com/chorusfruit-233/OnePlus_BakaSU_SUSFS_EXTEND/actions/runs/41698956616)与 [KernelSU 32716 完整构建](https://github.com/chorusfruit-233/OnePlus_BakaSU_SUSFS_EXTEND/actions/runs/41698956775)均使用清理缓存后的构建，内核为 6.6.118，SUSFS 为 v2.3.0。两套产物均验证 32 个内建 USB WiFi 驱动、67 个固件、50 项匹配原厂的无线符号 CRC，以及 Hybrid Mount 的 Image/System.map 链接。
+
+完整编译使用验证分支的 `b28a6be`，覆盖更新后的源码依赖、runner 和 MACVLAN 变更；随后加入的 namespace 兜底与发布流程调整由上述回归和实际产物验证覆盖。未进行真机启动验证。
