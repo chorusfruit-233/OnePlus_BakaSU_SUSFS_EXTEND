@@ -858,6 +858,7 @@ jobs:
         with:
           name: matrix.json
           path: ./downloaded-artifacts
+          skip-decompress: true
 
       - name: 📥 Download kernel ZIPs
         uses: actions/download-artifact@v8.0.2
@@ -865,6 +866,7 @@ jobs:
           pattern: 'AK3_*_USBWiFi.zip'
           path: ./downloaded-artifacts
           merge-multiple: true
+          skip-decompress: true
 
       - name: Validate complete release asset set
         run: |
