@@ -1,4 +1,6 @@
-截至 2026-11-03，已核对 WildKernels 主上游及全部构建依赖。本轮同步目标为 `11821d9e122629d0888382f588954ef79ee88af6`，相对上次已合并的 `ce52f331beea06a0c693ec58cb1b62a08446f5ac` 新增 12 个提交；最终同步提交保留上游为第二亲。
+截至 2026-11-03，已核对 WildKernels 主上游及全部构建依赖。本轮同步目标为 `11821d9e122629d0888382f588954ef79ee88af6`，相对上次已合并的 `ce52f331beea06a0c693ec58cb1b62a08446f5ac` 新增 12 个提交；同步提交保留上游合并历史。
+
+同时核对直接父仓库 Huangdihd 的 `797e00bdc50698e6ebfbeac736a5fe713cf819d2`。在单 OP13 范围内合入 namespace 补丁上下文恢复、精确保留产物型号和发布前产物校验；仅针对其他 SoC 的 BBG efisp 选择菜单不引入 OP13。继续保留新版 BakaSU 的 `ksu_install_su_fd()` 原生集成，不恢复父仓库中针对旧实现的删除逻辑。
 
 当前构建范围仍为 OP13 / OOS16 / Android 15 / Linux 6.6.118。应用上游的 Ubuntu 24.04 runner 固定、Droidspaces 的 `CONFIG_MACVLAN=y` 和 HMBIRD 分支修正；新机型的配置与 manifest、其他 Android/内核版本专用的补丁上下文调整不在维护范围内，未恢复已经删除的目标或 kernel-monitor 工作流。USB WiFi 驱动、固件内建、Hybrid Mount VFS 与原厂无线 ABI 检查继续保留。
 
@@ -32,7 +34,7 @@
 | OnePlusOSS common kernel | `oneplus/sm8750_b_16.0.0_oneplus_13` | `e1b346b6b4f4096eb342ae3684838a942fd6f6c4`（未变化） |
 | OnePlusOSS modules/device tree | `oneplus/sm8750_b_16.0.0_oneplus_13` | `d50b305f7da9e14715a25120a4ac7b1a4b8b97c3`（未变化） |
 
-BakaSU 本轮新增 SELinux inode/BTF 兼容处理；内建模式继续使用目标内核的类型布局。Droidspaces、NTSync、调度及优化补丁通过 `kernel_patches` 跟进。BBG 继续由官方 setup 脚本集成。AnyKernel3 每次直接同步所选分支；SUSFS 按构建开始时解析的提交下载一次并在构建矩阵中复用，API 与旧归档 URL 的共享归档适配保留。
+BakaSU 本轮新增 SELinux inode/BTF 兼容处理；内建模式继续使用目标内核的类型布局。Droidspaces、NTSync、调度及优化补丁通过 `kernel_patches` 跟进。BBG 继续由官方 setup 脚本集成。AnyKernel3 每次直接同步所选分支；SUSFS 按构建开始时解析的提交下载一次并在构建矩阵中复用，API 与旧归档 URL 的共享归档适配保留。namespace 恢复仅接受一个已知头文件/声明 hunk；额外功能改动、多个 hunk 或不符合预期的锚点都保留 `.rej`，继续走原有错误输出。
 
 兼容约束：
 
@@ -40,6 +42,8 @@ BakaSU 本轮新增 SELinux inode/BTF 兼容处理；内建模式继续使用目
 - 默认 ZyC Clang 保持 `19.0.0git-20240723-release`。最新发布顺序指向 Clang 14，而最高数字版本 Clang 23 为开发构建；本轮使用现有工具链验证新的依赖组合。
 - 原厂无线 ABI 参考仍限定 `PJZ110_16.0.10.501(CN01)` / 6.6.118。系统或内核版本改变后，仍需相应原厂模块重新建立参考。
 - Rust 构建仍关闭；不启用 Rust、bindgen 或其他机型专用依赖。
+
+发布时分别正常解包 `build-matrix` 和 `AK3_*_USBWiFi.zip` artifacts，排除共享构建工具和 debug 内容；创建标签前验证矩阵数量、目标对应关系、ZIP CRC、非空 `Image` 与 `anykernel.sh`，避免发布外层 artifact ZIP 或留下缺失产物的标签。独立的 `usb-wifi-*` 预发布命名仍保留。
 
 BakaSU 35252 及当前后续版本已由 ksud 从 `/data/adb/ksu/.susfs.json` 恢复 SUSFS 配置。旧版自动生成的 `susfs_manager` v1.0.2 模块可能仍携带旧 uname 和日志开关，在 ksud 之后覆盖运行值；它的“请勿删除”说明属于旧版模板。遇到配置文件不变、重启后 uname 回退时，先停用旧模块并验证；其中需要保留的自定义规则应备份或迁移到当前管理方式。
 

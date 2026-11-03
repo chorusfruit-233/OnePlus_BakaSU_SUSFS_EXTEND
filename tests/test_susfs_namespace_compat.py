@@ -55,10 +55,12 @@ class NamespaceCompatibilityTests(unittest.TestCase):
         self.assertEqual(self.target.read_bytes(), before)
 
     def test_unknown_functional_change_keeps_reject(self):
-        self.reject.write_text(REJECT + "+return 0;\n")
-        self.assertFalse(compat.recover(self.root))
-        self.assertEqual(self.target.read_text(), SOURCE)
-        self.assertTrue(self.reject.exists())
+        for statement in ("return 0;", "++reference_count;"):
+            with self.subTest(statement=statement):
+                self.reject.write_text(REJECT + "+" + statement + "\n")
+                self.assertFalse(compat.recover(self.root))
+                self.assertEqual(self.target.read_text(), SOURCE)
+                self.assertTrue(self.reject.exists())
 
     def test_another_hunk_keeps_entire_reject(self):
         self.reject.write_text(REJECT + "@@ -500,1 +511,2 @@\n+unhandled_change();\n")

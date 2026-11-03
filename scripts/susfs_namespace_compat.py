@@ -23,8 +23,13 @@ def recover(source):
     if not reject.is_file():
         return False
     lines = reject.read_text().splitlines()
-    additions = [line[1:].strip() for line in lines
-                 if line.startswith("+") and not line.startswith("+++") and line[1:].strip()]
+    additions = []
+    in_hunk = False
+    for line in lines:
+        if line.startswith("@@ "):
+            in_hunk = True
+        elif in_hunk and line.startswith("+") and line[1:].strip():
+            additions.append(line[1:].strip())
     # A reject containing another hunk or any functional change stays intact.
     if sum(line.startswith("@@ ") for line in lines) != 1 or sorted(additions) != sorted(ADDITIONS):
         return False
