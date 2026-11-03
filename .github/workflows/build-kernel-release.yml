@@ -1,4 +1,4 @@
-name: Build OnePlus 13 OOS16 (Built-in USB WiFi)
+name: Build OnePlus 13 OOS16 / ColorOS17 (Built-in USB WiFi)
 
 permissions:
   contents: write
@@ -7,6 +7,12 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      os_target:
+        description: 'Select system target (COS17 is experimental)'
+        required: true
+        type: choice
+        options: [oos16, cos17]
+        default: oos16
       make_release:
         description: 'Do you want to create a release?'
         required: true
@@ -53,6 +59,39 @@ on:
         type: string
         default: ''
 
+  workflow_call:
+    inputs:
+      os_target:
+        type: string
+        default: oos16
+      make_release:
+        type: boolean
+        default: false
+      ksu_type:
+        type: string
+        default: BakaSU
+      ksu_branch_or_hash:
+        type: string
+        default: 'main'
+      optimize_level:
+        type: string
+        default: O2
+      clean_build:
+        type: boolean
+        default: false
+      debug:
+        type: boolean
+        default: false
+      mirror_toolchains:
+        type: boolean
+        default: false
+      build_timestamp:
+        type: string
+        default: ''
+      android15-6_6_susfs_branch_or_commit:
+        type: string
+        default: ''
+
 jobs:
   set-op-model:
     runs-on: ubuntu-24.04
@@ -72,20 +111,24 @@ jobs:
         with:
           sparse-checkout: |
             configs/oos16/OP13.json
+            configs/cos17/OP13.json
             manifests/oos16/oneplus_13_w.xml
+            manifests/cos17/oneplus_13_w.xml
             scripts/build_target.py
           sparse-checkout-cone-mode: false
 
       - name: 🔍 Generate build matrix
         id: set-matrix
         shell: bash
+        env:
+          OS_TARGET: ${{ inputs.os_target }}
         run: |
           set -euo pipefail
           echo "::group::Matrix generation"
           
           ksu_type="${{ inputs.ksu_type }}"
           ksu_hash="${{ inputs.ksu_branch_or_hash }}"
-          python3 scripts/build_target.py --root "$GITHUB_WORKSPACE" > matrix.json
+          python3 scripts/build_target.py --target "$OS_TARGET" --root "$GITHUB_WORKSPACE" > matrix.json
           filtered=$(jq -c '.' matrix.json)
           count=$(jq 'length' matrix.json)
 
@@ -300,7 +343,7 @@ jobs:
           
           merged_matrix=$(echo "$merged_matrix" | jq '
             sort_by(
-              (.os_version | gsub("OOS"; "") | tonumber? // 0) * -1,
+              (.os_version | gsub("OOS|COS"; "") | tonumber? // 0) * -1,
               .model
             )
           ')
@@ -347,7 +390,7 @@ jobs:
             cat << 'EOF'
           ## 🎯 Build Plan
           
-          **Target:** OP13 / OOS16 / oneplus_13_w.xml
+          **Target:** OP13 / ${{ inputs.os_target }} / oneplus_13_w.xml
           **Devices:** ${{ steps.set-matrix.outputs.count }}  
           
           **Configuration:**
@@ -967,6 +1010,8 @@ jobs:
             
             if [[ "$os_ver" =~ ^OOS[0-9]+$ ]]; then
               os_display_version="Android ${os_ver#OOS}"
+            elif [ "$os_ver" = "COS17" ]; then
+              os_display_version="ColorOS 17 (experimental)"
             else
               os_display_version=$os_ver
             fi

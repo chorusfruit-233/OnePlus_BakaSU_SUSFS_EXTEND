@@ -48,15 +48,21 @@ def main():
     lines = ['Factory WLAN module ABI check', f'Model: {args.model}', f'Kernel: {args.kernel}']
     failures = []
     if not selected:
-        lines.append('No matching factory symbol reference; only wireless configuration guards verified separately.')
+        lines.append('ERROR: no matching factory wireless ABI reference; refusing to package.')
+        failures.append('no factory wireless ABI reference for requested model, OS and kernel')
     for reference in selected:
         lines.append('Factory system: ' + reference['system'])
+        experimental = reference.get('factory_wlan_imports') == 'unverified'
+        if experimental:
+            lines.append('Experimental reference: stock cfg80211 exports and rfkill imports; '
+                         'Qualcomm WLAN module imports are not independently audited')
         try:
             errors = check(reference, args.symvers)
         except (OSError, ValueError) as error:
             errors = [str(error)]
         failures.extend(errors)
-        lines.extend(errors or [f"PASS: {len(reference['symbols'])} built-in wireless symbol CRCs match factory module requirements"])
+        scope = 'stock cfg80211/rfkill reference' if experimental else 'factory module requirements'
+        lines.extend(errors or [f"PASS: {len(reference['symbols'])} built-in wireless symbol CRCs match {scope}"])
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text('\n'.join(lines) + '\n')
     print('\n'.join(lines))

@@ -59,3 +59,12 @@ class ReleaseAssetsTests(unittest.TestCase):
         self.archive.write_bytes(b"invalid archive")
         with self.assertRaises(zipfile.BadZipFile):
             assets.validate(self.root, 1)
+
+    def test_cos17_matrix_rejects_an_oos16_image_package(self):
+        self.matrix.write_text(json.dumps([{"model": "OP13", "os_version": "COS17"}]))
+        self.package()
+        with self.assertRaisesRegex(ValueError, "Missing or duplicated release asset"):
+            assets.validate(self.root, 1)
+        cos17 = self.archive.with_name(self.archive.name.replace("_OOS16_", "_COS17_"))
+        self.archive.rename(cos17)
+        self.assertEqual(assets.validate(self.root, 1), [cos17])

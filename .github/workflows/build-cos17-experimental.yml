@@ -1,0 +1,25 @@
+name: Experimental ColorOS 17 Kernel Build
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build-cos17:
+    permissions:
+      contents: write
+      actions: write
+    uses: ./.github/workflows/build-kernel-release.yml
+    with:
+      os_target: cos17
+      make_release: false
+      ksu_type: BakaSU
+      ksu_branch_or_hash: main
+      android15-6_6_susfs_branch_or_commit: ''
+      optimize_level: O2
+      clean_build: false
+      debug: false
+      mirror_toolchains: false
+      build_timestamp: ''

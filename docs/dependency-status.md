@@ -2,7 +2,9 @@
 
 同时核对直接父仓库 Huangdihd 的 `797e00bdc50698e6ebfbeac736a5fe713cf819d2`。在单 OP13 范围内合入 namespace 补丁上下文恢复、精确保留产物型号和发布前产物校验；仅针对其他 SoC 的 BBG efisp 选择菜单不引入 OP13。继续保留新版 BakaSU 的 `ksu_install_su_fd()` 原生集成，不恢复父仓库中针对旧实现的删除逻辑。
 
-当前构建范围仍为 OP13 / OOS16 / Android 15 / Linux 6.6.118。应用上游的 Ubuntu 24.04 runner 固定、Droidspaces 的 `CONFIG_MACVLAN=y` 和 HMBIRD 分支修正；新机型的配置与 manifest、其他 Android/内核版本专用的补丁上下文调整不在维护范围内，未恢复已经删除的目标或 kernel-monitor 工作流。USB WiFi 驱动、固件内建、Hybrid Mount VFS 与原厂无线 ABI 检查继续保留。
+上述上游同步的构建验证范围为 OP13 / OOS16 / GKI android15 / Linux 6.6.118。应用上游的 Ubuntu 24.04 runner 固定、Droidspaces 的 `CONFIG_MACVLAN=y` 和 HMBIRD 分支修正；新机型的配置与 manifest、其他 Android/内核版本专用的补丁上下文调整不在维护范围内，未恢复已经删除的目标或 kernel-monitor 工作流。USB WiFi 驱动、固件内建、Hybrid Mount VFS 与原厂无线 ABI 检查继续保留。
+
+随后将旧 C17 实验分支适配到这一主线：增加 OP13 / COS17 17.0.0.103 独立入口，沿用当前依赖、源码和工具链，保留各自的无线 ABI 参考；OOS16 仍为默认目标。自动同步保护和工具链镜像同时覆盖两个显式目标。C17 的实验范围及本轮验证记录见 [ColorOS17 适配](cos17.md)。
 
 固定依赖的核对结果：
 

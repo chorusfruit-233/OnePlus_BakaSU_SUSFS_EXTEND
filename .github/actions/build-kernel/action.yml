@@ -215,8 +215,8 @@ runs:
         
         if [[ -z "$os_version" ]]; then
           errors+=("Input 'os_version' cannot be empty")
-        elif [[ ! "$os_version" =~ ^OOS ]]; then
-          errors+=("Input 'os_version' does not start with 'OOS'. Got: '$os_version'")
+        elif [[ "$os_version" != "OOS16" && "$os_version" != "COS17" ]]; then
+          errors+=("Unsupported OP13 system target: '$os_version' (allowed: OOS16, COS17)")
         fi
         
         if [[ -z "$hmbird" ]]; then
@@ -1394,9 +1394,12 @@ runs:
           esac
           # Upstream WildKernels/kernel_patches names fengchi patches with the
           # A14/A15/A16 OS convention (e.g. fengchi_OP13T_A16.patch). This fork
-          # keeps OOS naming everywhere else, so translate OOS<NN> -> A<NN> only
-          # for the fengchi filename lookup against the upstream patches repo.
+          # Translate the source baseline to upstream's patch naming convention.
           HMBIRD_OS="${OP_OS_VERSION/OOS/A}"
+          if [ "$OP_OS_VERSION" = "COS17" ]; then
+            # COS17 uses the validated OOS16 GKI 6.6.118 source baseline.
+            HMBIRD_OS="A16"
+          fi
           HMBIRD_PATCH="$FENGCHI_DIR/fengchi_${HMBIRD_MODEL}_${HMBIRD_OS}.patch"
           if [ ! -f "$HMBIRD_PATCH" ] && [ "$FENGCHI_DIR" = "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/deprecated" ]; then
             echo "Deprecated HMBIRD patch is unavailable; falling back to the current patch set."
@@ -1729,6 +1732,10 @@ runs:
         NTSYNC_FOLDER="$KERNEL_PATCHES_FOLDER/common/ntsync"
         GKI_KEY="${ANDROID_VER}-${KERNEL_VER}"
         BRANCH_SUFFIX=$(basename "$OP_BRANCH")
+        NTSYNC_OS="${OP_OS_VERSION/OOS/A}"
+        if [ "$OP_OS_VERSION" = "COS17" ]; then
+          NTSYNC_OS="A16"
+        fi
         
         NTSYNC_PATCH=""
         case "$OP_MODEL" in
@@ -1746,12 +1753,12 @@ runs:
             echo "::error::NTSync compat patch not found for ${OP_MODEL}: $(basename $NTSYNC_PATCH)"
             exit 1
           fi
-        elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION/OOS/A}.patch" ]; then
-          NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION/OOS/A}.patch"
+        elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${NTSYNC_OS}.patch" ]; then
+          NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${NTSYNC_OS}.patch"
         elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch" ]; then
           NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch"
         else
-          echo "::error::NTSync patch not found for ${GKI_KEY} (Model: ${OP_MODEL}, OOS: ${OP_OS_VERSION})"
+          echo "::error::NTSync patch not found for ${GKI_KEY} (Model: ${OP_MODEL}, OS: ${OP_OS_VERSION})"
           exit 1
         fi
         

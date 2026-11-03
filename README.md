@@ -1,8 +1,9 @@
-# OnePlus 13 OOS16 内核（USB WiFi / Hybrid Mount VFS 内建）
+# OnePlus 13 OOS16 / ColorOS17 内核（USB WiFi / Hybrid Mount VFS 内建）
 
-主分支 `main` 只维护 OnePlus 13 OOS16，唯一配置为 `configs/oos16/OP13.json`，唯一源码 manifest 为 `manifests/oos16/oneplus_13_w.xml`（OnePlusOSS 分支 `oneplus/sm8750_b_16.0.0_oneplus_13`，android15-6.6，目前已验证 6.6.118）。按该源码尽可能内建 USB 无线网卡驱动、依赖与固件。驱动和 `cfg80211/mac80211` 等依赖以 `=y` 链接进内核 Image；所选驱动可获取的固件通过 `CONFIG_EXTRA_FIRMWARE` 同样链接进 Image，启动后由内核固件加载器直接提供。
+主分支 `main` 维护 OnePlus 13 的稳定 OOS16 与实验性 ColorOS17 两个目标，分别使用 `configs/{oos16,cos17}/OP13.json` 和 `manifests/{oos16,cos17}/oneplus_13_w.xml`。当前均使用 OnePlusOSS 的 `oneplus/sm8750_b_16.0.0_oneplus_13` 源码基线（android15-6.6 / 6.6.118）；官方尚未发布 OP13 的 ColorOS17 源码分支。按该源码尽可能内建 USB 无线网卡驱动、依赖与固件。驱动和 `cfg80211/mac80211` 等依赖以 `=y` 链接进内核 Image；所选驱动可获取的固件通过 `CONFIG_EXTRA_FIRMWARE` 同样链接进 Image，启动后由内核固件加载器直接提供。
 
-- 在 Actions 的 **Build OnePlus 13 OOS16 (Built-in USB WiFi)** 中选择 `main`。构建目标固定，不再提供机型、系统版本或配置路径选择。工具链镜像和构建 action 同样限制为这一目标；已移除其他机型、OOS14/OOS15 和 OP13 旧 6.6.89 的配置及 manifest。
+- 在 Actions 的 **Build OnePlus 13 OOS16 / ColorOS17 (Built-in USB WiFi)** 中选择 `main`，通过 `os_target` 选择 `oos16`（默认）或 `cos17`；也可运行 **Experimental ColorOS 17 Kernel Build** 直接构建 C17。机型固定为 OP13，不接受其他配置路径。工具链镜像读取两个显式目标，并按固定提交去重。
+- C17 目前限定 `PJZ110_17.0.0.103(CN01)` / 6.6.118，使用独立无线 ABI 参考，检查 43 个原厂 `cfg80211` 导出和 7 个 `rfkill` 导入。高通 WLAN 模块的完整导入尚未独立审计，不能沿用 OOS16 的真机验证结论；适配范围、构建方式及验证记录见 [ColorOS17 适配](docs/cos17.md)。
 - `profiles/usb-wifi.json` 维护 USB 网卡候选。构建使用该机型的完整 Kconfig 解析菜单、依赖和版本差异，逐个尝试内建；对厂商缺少结束引号的 `source` 行采用原生 Linux 的行尾终止规则，保持源码原样，并把兼容处理记录在覆盖报告中；源码没有的驱动、无法满足的依赖都会保留具体原因，不让单个不可用候选阻断其他可用驱动。未在该机型内核树中出现的驱动仍需后续回移。
 - 保留原配置中的 `CFG80211_WEXT`、`CFG80211_WEXT_EXPORT` 和 `NL80211_TESTMODE`，避免 USB 候选改变板载 WiFi 模块依赖的结构布局。会改变这些配置的驱动或可选辅助项自动回退并记录原因，`olddefconfig` 后和编译完成后再次检查。例如原厂关闭 WEXT 时跳过 `ORINOCO_USB`；原配置已兼容时仍可内建。
 - OP13 / OOS16 / 6.6.118 使用 `PJZ110_16.0.10.501(CN01)` 原厂 WiFi 模块的 ABI 参考，保存在 `profiles/vendor-wifi-abi/`。其 BTF 确认测试模式回调存在，因此启用 `NL80211_TESTMODE=y`，并保持 WEXT 关闭；不能仅从关闭 WiFi 核心的 GKI 配置推断这些厂商选项。打包前额外核对 50 个内建无线符号（43 个 `cfg80211`、7 个 `rfkill`）的 CRC，缺失、变为模块或 CRC 不匹配都会停止打包；结果保存在 `usb-wifi/vendor-abi.txt`。针对该版本，已内建的 `cfg80211`/`rfkill` 再次被厂商 modprobe 请求加载时返回“已加载”，避免重复符号错误中止高通驱动依赖链；仅此已建立 ABI 参考的目标启用此兼容处理，已由用户在 OP13 真机确认重启后的板载 WiFi 正常。后续系统更新仍需匹配的原厂模块参考及验证。
@@ -15,7 +16,7 @@
 
 45 项候选同时覆盖常见驱动和旧款网卡。只允许模块加载的驱动会跳过；部分驱动有上游实验限制，报告会保留说明。固件覆盖状态针对本次源码和清单识别出的需求，实际 USB 网卡绑定及工作情况仍需测试。
 
-当前 OP13 6.6.118 构建保留 32 项内建 USB 网卡驱动和 67 个固件文件，配置、Image 固件内容和原厂无线 ABI 均经过构建检查。板载 WiFi 已经真机验证；具体 USB 网卡的供电、绑定和网络使用仍需实测。
+当前 OOS16 / 6.6.118 构建保留 32 项内建 USB 网卡驱动和 67 个固件文件，配置、Image 固件内容和原厂无线 ABI 均经过构建检查。OOS16 板载 WiFi 已经真机验证；C17 和具体 USB 网卡的供电、绑定及网络使用仍需实测。
 
 本地回归检查：
 
@@ -30,13 +31,13 @@ PYTHONPATH=/tmp/usb-wifi-python python3 -m unittest discover -s tests -v
 
 ## Hybrid Mount VFS 驱动内建
 
-OP13 OOS16 的 BakaSU / KernelSU 构建内建 [Hybrid Mount 官方 VFS 驱动](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/89f328fd945c72794a6505d779f6d85834d131a3/module/vfs)。源码固定在 `profiles/hybridmount.json`，下载归档须通过 SHA256 校验；接入 `fs/hybridmount/`、`fs/Kconfig` 和 `fs/Makefile`，启用 `CONFIG_HYBRIDMOUNT=y`、`CONFIG_KEYS=y`。根据实际内核头文件适配 xattr 参数，保留许可证和源码来源记录。
+OP13 两个目标的 BakaSU / KernelSU 构建均内建 [Hybrid Mount 官方 VFS 驱动](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/89f328fd945c72794a6505d779f6d85834d131a3/module/vfs)。源码固定在 `profiles/hybridmount.json`，下载归档须通过 SHA256 校验；接入 `fs/hybridmount/`、`fs/Kconfig` 和 `fs/Makefile`，启用 `CONFIG_HYBRIDMOUNT=y`、`CONFIG_KEYS=y`。根据实际内核头文件适配 xattr 参数，保留许可证和源码来源记录。
 
 已移除 NoMount 的构建集成。两种驱动不能共存，构建会检查并拒绝遗留的 NoMount 集成。配置阶段检查驱动始终为内建，编译后验证 `hybridmount_init`、`hm_key_type` 和 Image 初始化信息；不符合要求则停止打包。ZIP 和 debug 产物中的 `hybridmount-support/` 保存源码提交、许可证、校验值和验证报告。
 
 刷入新内核前卸载原 NoMount 元模块；刷入后安装 [Hybrid Mount 官方元模块](https://github.com/Hybrid-Mount/meta-hybrid_mount/releases)。元模块提供规则、CLI 和 WebUI，选择 VFS 后端后才使用内建驱动；内建驱动不需要加载 `hybridmount.ko`。其 key 类型及协议为 `hybridmount` / `hm1`，不兼容 NoMount 的 `nm` 工具。使用元模块提供的 `hybrid-mount vfs version` 和 `hybrid-mount vfs doctor` 检查版本及内建状态。尚需完整内核构建及真机验证。
 
-同步上游更新时保留 OP13 OOS16 的固定构建范围、固件内建、原厂无线 ABI 检查、Hybrid Mount VFS 和 USBWiFi 产物命名。以下保留项目来源、功能和致谢。
+同步上游更新时保留 OP13 OOS16 / COS17 的显式构建范围、固件内建、各自的无线 ABI 检查、Hybrid Mount VFS 和 USBWiFi 产物命名。以下保留项目来源、功能和致谢。
 
 上游同步与全部构建依赖的核对结果见 [依赖状态](docs/dependency-status.md)。GitHub Actions 和 Python 依赖由 Dependabot 每周检查，内核源码、BakaSU、SUSFS 和补丁继续按所选分支跟进。
 
@@ -44,7 +45,7 @@ OP13 OOS16 的 BakaSU / KernelSU 构建内建 [Hybrid Mount 官方 VFS 驱动](h
 
 <div align="center">
 
-# OnePlus 13 OOS16 — 基于 Huangdihd / WildKernels
+# OnePlus 13 OOS16 / ColorOS17 — 基于 Huangdihd / WildKernels
 
 [![KernelSU](https://img.shields.io/badge/KernelSU-Supported-green)](https://kernelsu.org/)
 [![BakaSU](https://img.shields.io/badge/BakaSU-Supported-green)](https://bakasu.org/)
@@ -79,6 +80,7 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 | 机型 | 系统 | Manifest | 配置 |
 |------|------|----------|------|
 | OnePlus 13 | OOS16 / 对应 ColorOS16 原厂系统 | `oneplus_13_w.xml` | `configs/oos16/OP13.json` |
+| OnePlus 13 | ColorOS17 17.0.0.103 实验目标 | `cos17/oneplus_13_w.xml` | `configs/cos17/OP13.json` |
 
 ## 🔗 Additional Resources
 
@@ -89,13 +91,13 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 
 ## 兼容性
 
-详见 [compatibility.md](compatibility.md)。当前真机参考为 PJZ110、`PJZ110_16.0.10.501(CN01)`、6.6.118；不提供其他机型或旧版系统构建。
+详见 [compatibility.md](compatibility.md)。OOS16 真机参考为 PJZ110、`PJZ110_16.0.10.501(CN01)`、6.6.118；C17 实验参考单独限定为 `PJZ110_17.0.0.103(CN01)` / 6.6.118。不提供其他机型或旧版系统构建。
 
 ---
 
 ## ✨ Features
 
-以下功能面向 **OnePlus 13 / OOS16 / `oneplus_13_w.xml`**。
+以下功能面向 **OnePlus 13 / OOS16 或实验性 COS17 / `oneplus_13_w.xml`**，真机验证范围按上述兼容性说明。
 
 - 🔐 **BakaSU / KernelSU**：默认使用官方 [BakaSU](https://github.com/Baka-SU/BakaSU)（原 ReSukiSU），也可在 Actions 选择 KernelSU。
 - 🥷 **SUSFS**：集成内核侧支持；配套管理功能需安装对应的 SUSFS 用户空间模块。

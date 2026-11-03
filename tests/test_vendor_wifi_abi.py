@@ -55,3 +55,30 @@ class VendorAbiTests(unittest.TestCase):
         self.symvers.write_text(''.join(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n'
                                        for name, crc in reference['symbols'].items()))
         self.assertEqual(abi.check(reference, self.symvers), [])
+
+    def test_missing_reference_refuses_packaging_instead_of_using_another_os(self):
+        for os_version, kernel in [('COS17', '6.6.123'), ('OOS16', '6.6.89'), ('COS18', '6.6.118')]:
+            with self.subTest(os_version=os_version, kernel=kernel):
+                report = Path(self.temp.name) / 'unknown-abi.txt'
+                result = subprocess.run([sys.executable, SPEC.origin, '--model', 'OP13',
+                                         '--os-version', os_version, '--kernel', kernel,
+                                         '--symvers', str(self.symvers), '--report', str(report)],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn('no matching factory wireless ABI reference', report.read_text())
+                self.assertNotIn('PASS:', result.stdout)
+
+    def test_cos17_crc_report_keeps_the_experimental_reference_scope(self):
+        reference = abi.selected_references('OP13', 'COS17', '6.6.118')[0]
+        self.assertEqual(reference['factory_wlan_imports'], 'unverified')
+        self.symvers.write_text(''.join(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n'
+                                       for name, crc in reference['symbols'].items()))
+        report = Path(self.temp.name) / 'cos17-abi.txt'
+        result = subprocess.run([sys.executable, SPEC.origin, '--model', 'OP13',
+                                 '--os-version', 'COS17', '--kernel', '6.6.118',
+                                 '--symvers', str(self.symvers), '--report', str(report)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('PASS: 50', result.stdout)
+        self.assertIn('not independently audited', result.stdout)
+        self.assertNotIn('match factory module requirements', result.stdout)

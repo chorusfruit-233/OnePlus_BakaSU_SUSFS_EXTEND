@@ -237,8 +237,8 @@ config NL80211_TESTMODE
         self.add_testmode_fixture()
         original = self.config.read_text()
         for os_version, kernel, expected in [('OOS16', 'android15-6.6.118', 'y'),
-                                             ('OOS15', 'android15-6.6.118', 'n'),
-                                             ('OOS16', 'android15-6.6.89', 'n')]:
+                                             ('COS17', 'android15-6.6.118', 'y'),
+                                             ('OOS15', 'android15-6.6.118', 'n')]:
             with self.subTest(os_version=os_version, kernel=kernel):
                 self.config.write_text(original)
                 plan = wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
@@ -246,6 +246,16 @@ config NL80211_TESTMODE
                 self.assertEqual(wifi.read_config(self.config)['NL80211_TESTMODE'], expected)
                 self.assertEqual(plan['abi_preserved']['NL80211_TESTMODE'], expected)
                 self.assertEqual(bool(plan['abi_reference']), expected == 'y')
+
+    def test_supported_os_with_unknown_kernel_refuses_to_modify_config(self):
+        original = self.config.read_bytes()
+        for os_version in ('OOS16', 'COS17'):
+            with self.subTest(os_version=os_version), self.assertRaisesRegex(
+                    ValueError, 'No matching factory wireless ABI reference'):
+                wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
+                                'OP13', 'android15-6.6.123', os_version)
+            self.assertEqual(self.config.read_bytes(), original)
+            self.assertFalse(self.plan_path.exists())
 
     def test_factory_reference_does_not_override_unrelated_kernel_options(self):
         reference = {'system': 'fixture', 'config': {'X86': 'y'}}
