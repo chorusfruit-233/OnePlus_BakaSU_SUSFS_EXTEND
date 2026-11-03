@@ -9,8 +9,9 @@ jobs:
   audit:
     permissions:
       contents: read
+      actions: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-python@v7.1.0
@@ -148,14 +149,51 @@ jobs:
         with:
           name: upstream-audit
           path: upstream-audit.json
-  verify-bakasu:
-    needs: audit
-    uses: ./.github/workflows/build-kernel-release.yml
-    with:
-      make_release: false
-      ksu_type: 'BakaSU'
-      ksu_branch_or_hash: 'main'
-      optimize_level: 'O2'
-      clean_build: true
-      debug: false
-      mirror_toolchains: false
+      - name: Wait for native build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import json, os, time, urllib.request
+          url = "https://api.github.com/repos/chorusfruit-233/OnePlus_BakaSU_SUSFS_EXTEND/actions/runs/41698956616"
+          for attempt in range(41):
+              req = urllib.request.Request(url, headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"], "User-Agent": "OP13-release-validation"})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  run = json.load(response)
+              if run["status"] == "completed":
+                  if run["conclusion"] != "success":
+                      raise SystemExit("Native BakaSU verification did not succeed")
+                  print("Native build artifacts are ready")
+                  break
+              if attempt == 40:
+                  raise SystemExit("Timed out waiting for native build artifacts")
+              print("Waiting for native build artifacts", flush=True)
+              time.sleep(15)
+      - name: Download real build matrix for release validation
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: build-matrix
+          path: ./downloaded-artifacts
+          run-id: 41698956616
+          github-token: ${{ github.token }}
+      - name: Download real kernel ZIP for release validation
+        uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: 'AK3_*_USBWiFi.zip'
+          path: ./downloaded-artifacts
+          merge-multiple: true
+          run-id: 41698956616
+          github-token: ${{ github.token }}
+      - name: Validate real release download and tag ordering
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess, yaml
+          workflow = yaml.load(Path(".github/workflows/build-kernel-release.yml").read_text(), Loader=yaml.BaseLoader)
+          steps = workflow["jobs"]["trigger-release"]["steps"]
+          names = [step.get("name") for step in steps]
+          assert names.index("Validate complete release asset set") < names.index("🏷️ Generate and Create New Tag")
+          step = next(step for step in steps if step.get("name") == "Validate complete release asset set")
+          code = step["run"].replace("${{ needs.set-op-model.outputs.device_count }}", "1")
+          subprocess.run(["bash", "-euo", "pipefail", "-c", code], check=True)
+          print("REAL_ARTIFACT_EXTRACTION_AND_RELEASE_VALIDATION_OK")

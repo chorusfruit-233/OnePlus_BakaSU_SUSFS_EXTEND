@@ -853,6 +853,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 📥 Download build matrix
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: build-matrix
+          path: ./downloaded-artifacts
+
+      - name: 📥 Download kernel ZIPs
+        uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: 'AK3_*_USBWiFi.zip'
+          path: ./downloaded-artifacts
+          merge-multiple: true
+
+      - name: Validate complete release asset set
+        run: |
+          python3 scripts/validate_release_assets.py \
+            --directory ./downloaded-artifacts \
+            --expected "${{ needs.set-op-model.outputs.device_count }}"
+
       - name: 🏷️ Generate and Create New Tag
         run: |
           set -euo pipefail
@@ -861,25 +880,6 @@ jobs:
           echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_ENV"
           git tag "$NEW_TAG" "$GITHUB_SHA"
           git push origin "$NEW_TAG"
-
-      - name: 📥 Download Artifacts
-        uses: actions/download-artifact@v8.0.2
-        with:
-          path: ./downloaded-artifacts
-          merge-multiple: true
-          skip-decompress: true
-
-      - name: 🧹 Exclude build helper artifacts from release staging
-        run: |
-          # Shared build helpers must never become release assets. With
-          # skip-decompress=true, archived helpers are downloaded as <name>.zip.
-          find ./downloaded-artifacts -maxdepth 2 -type f -name ccache -delete
-          find ./downloaded-artifacts -maxdepth 2 -type f -name 'susfs4ksu-*.tar.gz' -delete
-          rm -f ./downloaded-artifacts/ccache-binary.zip
-          rm -f ./downloaded-artifacts/susfs-archives.zip
-          rm -rf ./downloaded-artifacts/ccache-binary
-          rm -rf ./downloaded-artifacts/susfs-archives
-          echo "✅ build helper artifacts excluded from release staging"
 
       - name: 📝 Generate Device List and Final Release Notes
         id: generate-notes

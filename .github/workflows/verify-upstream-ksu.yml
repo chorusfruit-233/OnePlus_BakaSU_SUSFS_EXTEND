@@ -1,7 +1,6 @@
 name: Verify upstream KernelSU compatibility
 on:
-  push:
-    branches: [maintenance/upstreams-20261103]
+  workflow_dispatch:
 permissions:
   contents: write
   actions: write

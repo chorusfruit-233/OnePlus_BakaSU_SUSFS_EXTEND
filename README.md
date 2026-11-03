@@ -26,6 +26,8 @@ PYTHONPATH=/tmp/usb-wifi-python python3 -m unittest discover -s tests -v
 
 构建已迁移到 `Baka-SU/BakaSU`，Actions 默认选项、产物名称和提交链接使用 BakaSU，内核版本后缀为 `OP-BAKASU`。USB WiFi、原厂无线 ABI 校验及 SUSFS 集成保留，挂载支持改为 Hybrid Mount VFS。
 
+新版 BakaSU 已由 ksud 直接恢复 SUSFS 配置。旧版自动生成的 `susfs_manager` v1.0.2 模块可能在开机后再次写入旧 uname 和日志设置；若遇到配置文件正常而重启后 uname 回退，先禁用旧模块并重启验证，需要保留的旧规则先备份或迁移。
+
 ## Hybrid Mount VFS 驱动内建
 
 OP13 OOS16 的 BakaSU / KernelSU 构建内建 [Hybrid Mount 官方 VFS 驱动](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/89f328fd945c72794a6505d779f6d85834d131a3/module/vfs)。源码固定在 `profiles/hybridmount.json`，下载归档须通过 SHA256 校验；接入 `fs/hybridmount/`、`fs/Kconfig` 和 `fs/Makefile`，启用 `CONFIG_HYBRIDMOUNT=y`、`CONFIG_KEYS=y`。根据实际内核头文件适配 xattr 参数，保留许可证和源码来源记录。
