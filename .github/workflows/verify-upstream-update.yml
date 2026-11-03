@@ -172,7 +172,7 @@ jobs:
       - name: Download real build matrix for release validation
         uses: actions/download-artifact@v8.0.2
         with:
-          name: build-matrix
+          name: matrix.json
           path: ./downloaded-artifacts
           run-id: 41698956616
           github-token: ${{ github.token }}

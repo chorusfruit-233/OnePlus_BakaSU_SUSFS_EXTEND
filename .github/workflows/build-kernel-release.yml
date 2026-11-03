@@ -856,7 +856,7 @@ jobs:
       - name: 📥 Download build matrix
         uses: actions/download-artifact@v8.0.2
         with:
-          name: build-matrix
+          name: matrix.json
           path: ./downloaded-artifacts
 
       - name: 📥 Download kernel ZIPs
