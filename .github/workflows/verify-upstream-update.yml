@@ -11,7 +11,7 @@ jobs:
       contents: read
       actions: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-python@v7.1.0
@@ -156,7 +156,7 @@ jobs:
         run: |
           import json, os, time, urllib.request
           url = "https://api.github.com/repos/chorusfruit-233/OnePlus_BakaSU_SUSFS_EXTEND/actions/runs/41698956616"
-          for attempt in range(41):
+          for attempt in range(121):
               req = urllib.request.Request(url, headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"], "User-Agent": "OP13-release-validation"})
               with urllib.request.urlopen(req, timeout=30) as response:
                   run = json.load(response)
@@ -165,7 +165,7 @@ jobs:
                       raise SystemExit("Native BakaSU verification did not succeed")
                   print("Native build artifacts are ready")
                   break
-              if attempt == 40:
+              if attempt == 120:
                   raise SystemExit("Timed out waiting for native build artifacts")
               print("Waiting for native build artifacts", flush=True)
               time.sleep(15)

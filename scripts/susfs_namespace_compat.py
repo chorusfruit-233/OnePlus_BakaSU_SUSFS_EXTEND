@@ -28,6 +28,8 @@ def recover(source):
     for line in lines:
         if line.startswith("@@ "):
             in_hunk = True
+        elif in_hunk and line.startswith("-") and line[1:].strip():
+            return False
         elif in_hunk and line.startswith("+") and line[1:].strip():
             additions.append(line[1:].strip())
     # A reject containing another hunk or any functional change stays intact.

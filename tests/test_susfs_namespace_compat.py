@@ -55,9 +55,9 @@ class NamespaceCompatibilityTests(unittest.TestCase):
         self.assertEqual(self.target.read_bytes(), before)
 
     def test_unknown_functional_change_keeps_reject(self):
-        for statement in ("return 0;", "++reference_count;"):
-            with self.subTest(statement=statement):
-                self.reject.write_text(REJECT + "+" + statement + "\n")
+        for change in ("+return 0;", "+++reference_count;", "-existing_check();"):
+            with self.subTest(change=change):
+                self.reject.write_text(REJECT + change + "\n")
                 self.assertFalse(compat.recover(self.root))
                 self.assertEqual(self.target.read_text(), SOURCE)
                 self.assertTrue(self.reject.exists())
