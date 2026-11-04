@@ -35,7 +35,7 @@ OP13 两个目标的 BakaSU / KernelSU 构建均内建 [Hybrid Mount 官方 VFS 
 
 已移除 NoMount 的构建集成。两种驱动不能共存，构建会检查并拒绝遗留的 NoMount 集成。配置阶段检查驱动始终为内建，编译后验证 `hybridmount_init`、`hm_key_type` 和 Image 初始化信息；不符合要求则停止打包。ZIP 和 debug 产物中的 `hybridmount-support/` 保存源码提交、许可证、校验值和验证报告。
 
-刷入新内核前卸载原 NoMount 元模块；刷入后安装 [Hybrid Mount 官方元模块](https://github.com/Hybrid-Mount/meta-hybrid_mount/releases)。元模块提供规则、CLI 和 WebUI，选择 VFS 后端后才使用内建驱动；内建驱动不需要加载 `hybridmount.ko`。其 key 类型及协议为 `hybridmount` / `hm1`，不兼容 NoMount 的 `nm` 工具。使用元模块提供的 `hybrid-mount vfs version` 和 `hybrid-mount vfs doctor` 检查版本及内建状态。尚需完整内核构建及真机验证。
+刷入新内核前卸载原 NoMount 元模块；刷入后安装 [Hybrid Mount 官方元模块](https://github.com/Hybrid-Mount/meta-hybrid_mount/releases)。元模块提供规则、CLI 和 WebUI，选择 VFS 后端后才使用内建驱动；内建驱动不需要加载 `hybridmount.ko`。其 key 类型及协议为 `hybridmount` / `hm1`，不兼容 NoMount 的 `nm` 工具。使用元模块提供的 `hybrid-mount vfs version` 和 `hybrid-mount vfs doctor` 检查版本及内建状态。完整编译与链接检查见各目标的验证记录，实际挂载规则仍需真机验证。
 
 同步上游更新时保留 OP13 OOS16 / COS17 的显式构建范围、固件内建、各自的无线 ABI 检查、Hybrid Mount VFS 和 USBWiFi 产物命名。以下保留项目来源、功能和致谢。
 
@@ -79,7 +79,7 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 
 | 机型 | 系统 | Manifest | 配置 |
 |------|------|----------|------|
-| OnePlus 13 | OOS16 / 对应 ColorOS16 原厂系统 | `oneplus_13_w.xml` | `configs/oos16/OP13.json` |
+| OnePlus 13 | OOS16 / 对应 ColorOS16 原厂系统 | `oos16/oneplus_13_w.xml` | `configs/oos16/OP13.json` |
 | OnePlus 13 | ColorOS17 17.0.0.103 实验目标 | `cos17/oneplus_13_w.xml` | `configs/cos17/OP13.json` |
 
 ## 🔗 Additional Resources
@@ -100,7 +100,7 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 以下功能面向 **OnePlus 13 / OOS16 或实验性 COS17 / `oneplus_13_w.xml`**，真机验证范围按上述兼容性说明。
 
 - 🔐 **BakaSU / KernelSU**：默认使用官方 [BakaSU](https://github.com/Baka-SU/BakaSU)（原 ReSukiSU），也可在 Actions 选择 KernelSU。
-- 🥷 **SUSFS**：集成内核侧支持；配套管理功能需安装对应的 SUSFS 用户空间模块。
+- 🥷 **SUSFS**：集成内核侧支持；BakaSU 使用内置管理功能和 ksud，KernelSU 使用兼容的 SUSFS 用户空间工具。
 - 📶 **内建 USB WiFi**：当前 6.6.118 构建内建 32 项 USB 网卡驱动及 `cfg80211` / `mac80211` 等依赖，无需额外加载网卡驱动 `.ko`。
 - 📦 **内建无线固件**：当前构建嵌入 67 个固件文件；ZIP 附带驱动覆盖、固件缺失、来源、校验值及许可证报告。具体网卡仍需实测。
 - ✅ **板载 WiFi 兼容修复**：核对 50 个原厂无线符号 CRC，并处理内建 `cfg80211` / `rfkill` 被重复加载的问题；OP13 OOS16 6.6.118 已由用户确认开机 WiFi 正常。
