@@ -16,7 +16,7 @@ class VendorAbiTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.symvers = Path(self.temp.name) / 'Module.symvers'
-        self.reference = {'model': 'OP13', 'os_version': 'OOS16', 'kernel': '6.6.118',
+        self.reference = {'model': 'OP13', 'os_version': 'COS17', 'kernel': '6.6.118',
                           'symbols': {'wiphy_register': '0x73c9f04c'}}
 
     def test_matching_builtin_crc_passes(self):
@@ -34,15 +34,15 @@ class VendorAbiTests(unittest.TestCase):
         self.assertIn('not built-in', abi.check(self.reference, self.symvers)[0])
 
     def test_reference_is_scoped_to_exact_model_os_and_kernel(self):
-        self.assertTrue(abi.matches(self.reference, 'OP13', 'OOS16', 'android15-6.6.118'))
-        self.assertFalse(abi.matches(self.reference, 'OP13', 'OOS16', 'android15-6.6.89'))
+        self.assertTrue(abi.matches(self.reference, 'OP13', 'COS17', 'android15-6.6.118'))
+        self.assertFalse(abi.matches(self.reference, 'OP13', 'COS17', 'android15-6.6.89'))
         self.assertFalse(abi.matches(self.reference, 'OP13', 'OOS15', '6.6.118'))
-        self.assertFalse(abi.matches(self.reference, 'OP13T', 'OOS16', '6.6.118'))
+        self.assertFalse(abi.matches(self.reference, 'OP13T', 'COS17', '6.6.118'))
 
     def test_cli_refuses_packaging_but_saves_mismatch_report(self):
         self.symvers.write_text('')
         report = Path(self.temp.name) / 'vendor-abi.txt'
-        result = subprocess.run([sys.executable, SPEC.origin, '--model', 'OP13', '--os-version', 'OOS16',
+        result = subprocess.run([sys.executable, SPEC.origin, '--model', 'OP13', '--os-version', 'COS17',
                                  '--kernel', 'android15-6.6.118', '--symvers', str(self.symvers),
                                  '--report', str(report)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 1)
@@ -50,14 +50,14 @@ class VendorAbiTests(unittest.TestCase):
         self.assertIn('wiphy_register: missing', report.read_text())
 
     def test_factory_reference_matches_all_50_builtin_exports(self):
-        reference = json.loads((abi.REFERENCES / 'op13-oos16-6.6.118.json').read_text())
+        reference = json.loads((abi.REFERENCES / 'op13-cos17-6.6.118.json').read_text())
         self.assertEqual(len(reference['symbols']), 50)
         self.symvers.write_text(''.join(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n'
                                        for name, crc in reference['symbols'].items()))
         self.assertEqual(abi.check(reference, self.symvers), [])
 
     def test_missing_reference_refuses_packaging_instead_of_using_another_os(self):
-        for os_version, kernel in [('COS17', '6.6.123'), ('OOS16', '6.6.89'), ('COS18', '6.6.118')]:
+        for os_version, kernel in [('COS17', '6.6.123'), ('OOS16', '6.6.118'), ('COS18', '6.6.118')]:
             with self.subTest(os_version=os_version, kernel=kernel):
                 report = Path(self.temp.name) / 'unknown-abi.txt'
                 result = subprocess.run([sys.executable, SPEC.origin, '--model', 'OP13',

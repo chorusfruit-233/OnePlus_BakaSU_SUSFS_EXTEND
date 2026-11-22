@@ -8,7 +8,7 @@ import re
 import tarfile
 
 LOCK = Path(__file__).resolve().parents[1] / "profiles/hybridmount.json"
-FILES = ("Kconfig", "hybridmount.c", "hybridmount.h", "PROVENANCE", "UPSTREAM_README.md")
+FILES = ("Kconfig", "hybridmount.c", "hybridmount.h", "PROVENANCE", "UPSTREAM_README.md", "Makefile")
 KCONFIG = 'source "fs/hybridmount/Kconfig"'
 MAKEFILE = 'obj-$(CONFIG_HYBRIDMOUNT) += hybridmount/'
 FLAGS_CONDITION = '#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 12, 0) && LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)'
@@ -29,16 +29,22 @@ def adapt_xattr(contents, source):
     if text.count(FLAGS_CONDITION) != 1:
         raise ValueError("Pinned Hybrid Mount xattr compatibility block changed")
     text = text.replace(FLAGS_CONDITION, "#if " + str(int(signatures["get"])))
-    text += "\n#define HM_VFS_FLAGS_VAL " + (", flags" if signatures["vfs_getxattr"] else "/* Nothing */") + "\n"
-    # A VFS API requiring flags with a callback without flags needs a zero default.
-    if signatures["vfs_getxattr"] and not signatures["get"]:
-        text = text.replace("#define HM_VFS_FLAGS_VAL , flags", "#define HM_VFS_FLAGS_VAL , 0")
+    # The raw __get callback added in v6.2.6 never receives flags.
+    vfs_flags = (", flags" if signatures["get"] else ", 0") if signatures["vfs_getxattr"] else ""
+    text += "\n#define HM_VFS_FLAGS_VAL " + vfs_flags + "\n"
     contents["hybridmount.h"] = text.encode()
     text = contents["hybridmount.c"].decode()
-    call = "xattr_full_name(handler, name), buffer, size FLAGS_VAL)"
-    if text.count(call) != 1:
-        raise ValueError("Pinned Hybrid Mount xattr call changed")
-    contents["hybridmount.c"] = text.replace(call, "xattr_full_name(handler, name), buffer, size HM_VFS_FLAGS_VAL)").encode()
+    calls = {
+        "full_name, buffer, size FLAGS_VAL);": "full_name, buffer, size HM_VFS_FLAGS_VAL);",
+        "full_name, buffer, size);": "full_name, buffer, size" + (", 0" if signatures["vfs_getxattr"] else "") + ");",
+        "return proxy->orig->get(proxy->orig, dentry, inode, name, buffer, size);":
+            "return proxy->orig->get(proxy->orig, dentry, inode, name, buffer, size" + (", 0" if signatures["get"] else "") + ");",
+    }
+    for original, adapted in calls.items():
+        if text.count(original) != 1:
+            raise ValueError("Pinned Hybrid Mount xattr call changed: " + original)
+        text = text.replace(original, adapted)
+    contents["hybridmount.c"] = text.encode()
     return signatures
 
 
@@ -66,13 +72,16 @@ def install(source, archive, lock):
             if not member.isfile():
                 raise ValueError(f"Hybrid Mount source is not a regular file: {name}")
             contents[name] = tar.extractfile(member).read()
-    contents["Makefile"] = b'obj-$(CONFIG_HYBRIDMOUNT) += hybridmount.o\nccflags-y += -std=gnu11 -Wno-declaration-after-statement\n'
     upstream_hashes = {name: digest(contents[name]) for name in FILES}
+    flags = [line for line in contents["Makefile"].splitlines() if line.startswith(b"ccflags-y +=")]
+    if not flags:
+        raise ValueError("Pinned Hybrid Mount compiler flags missing")
+    contents["Makefile"] = b"\n".join([b"obj-$(CONFIG_HYBRIDMOUNT) += hybridmount.o", *flags, b""])
     xattr_api = adapt_xattr(contents, source)
     target = source / "fs/hybridmount"
     if target.is_symlink() or (target.exists() and not target.is_dir()):
         raise ValueError("Conflicting existing fs/hybridmount; refusing to replace it")
-    for name in FILES + ("Makefile", "LICENSE"):
+    for name in FILES + ("LICENSE",):
         path = target / name
         if path.is_symlink() or (path.exists() and path.read_bytes() != contents[name]):
             raise ValueError(f"Conflicting existing Hybrid Mount source: {path}")
@@ -85,7 +94,7 @@ def install(source, archive, lock):
     config = defconfig.read_text()
     ensure_no_nomount(source, config)
     target.mkdir(parents=True, exist_ok=True)
-    for name in FILES + ("Makefile", "LICENSE"):
+    for name in FILES + ("LICENSE",):
         (target / name).write_bytes(contents[name])
     for path, line in wiring:
         if line not in path.read_text().splitlines():

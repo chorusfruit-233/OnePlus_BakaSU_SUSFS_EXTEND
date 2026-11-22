@@ -236,7 +236,7 @@ config NL80211_TESTMODE
     def test_factory_reference_restores_option_hidden_by_disabled_gki_core(self):
         self.add_testmode_fixture()
         original = self.config.read_text()
-        for os_version, kernel, expected in [('OOS16', 'android15-6.6.118', 'y'),
+        for os_version, kernel, expected in [('OOS16', 'android15-6.6.118', 'n'),
                                              ('COS17', 'android15-6.6.118', 'y'),
                                              ('OOS15', 'android15-6.6.118', 'n')]:
             with self.subTest(os_version=os_version, kernel=kernel):
@@ -249,13 +249,11 @@ config NL80211_TESTMODE
 
     def test_supported_os_with_unknown_kernel_refuses_to_modify_config(self):
         original = self.config.read_bytes()
-        for os_version in ('OOS16', 'COS17'):
-            with self.subTest(os_version=os_version), self.assertRaisesRegex(
-                    ValueError, 'No matching factory wireless ABI reference'):
-                wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
-                                'OP13', 'android15-6.6.123', os_version)
-            self.assertEqual(self.config.read_bytes(), original)
-            self.assertFalse(self.plan_path.exists())
+        with self.assertRaisesRegex(ValueError, 'No matching factory wireless ABI reference'):
+            wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
+                            'OP13', 'android15-6.6.123', 'COS17')
+        self.assertEqual(self.config.read_bytes(), original)
+        self.assertFalse(self.plan_path.exists())
 
     def test_factory_reference_does_not_override_unrelated_kernel_options(self):
         reference = {'system': 'fixture', 'config': {'X86': 'y'}}
@@ -275,7 +273,7 @@ config X86
             'bool "factory test mode"\n    depends on CFG80211 && X86'))
         with self.assertRaisesRegex(ValueError, 'cannot preserve wireless ABI CONFIG_NL80211_TESTMODE=y'):
             wifi.apply_plan(self.root, self.config, self.profile, self.plan_path,
-                            'OP13', 'android15-6.6.118', 'OOS16')
+                            'OP13', 'android15-6.6.118', 'COS17')
 
     def firmware_manifest(self, source, drivers, staging, metadata, **kwargs):
         data = b'firmware-test-data'

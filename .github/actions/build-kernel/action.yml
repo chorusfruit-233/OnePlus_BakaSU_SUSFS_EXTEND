@@ -222,8 +222,8 @@ runs:
         
         if [[ -z "$os_version" ]]; then
           errors+=("Input 'os_version' cannot be empty")
-        elif [[ "$os_version" != "OOS16" && "$os_version" != "COS17" ]]; then
-          errors+=("Unsupported OP13 system target: '$os_version' (allowed: OOS16, COS17)")
+        elif [[ "$os_version" != "COS17" ]]; then
+          errors+=("Unsupported OP13 system target: '$os_version' (expected COS17)")
         fi
         
         if [[ -z "$hmbird" ]]; then
@@ -1411,14 +1411,8 @@ runs:
             OP13-6.6.30)
               HMBIRD_MODEL="OP13-PJZ" ;;
           esac
-          # Upstream WildKernels/kernel_patches names fengchi patches with the
-          # A14/A15/A16 OS convention (e.g. fengchi_OP13T_A16.patch). This fork
-          # Translate the source baseline to upstream's patch naming convention.
-          HMBIRD_OS="${OP_OS_VERSION/OOS/A}"
-          if [ "$OP_OS_VERSION" = "COS17" ]; then
-            # COS17 uses the validated OOS16 GKI 6.6.118 source baseline.
-            HMBIRD_OS="A16"
-          fi
+          # This public OP13 source baseline uses upstream's A16 patch set.
+          HMBIRD_OS="A16"
           HMBIRD_PATCH="$FENGCHI_DIR/fengchi_${HMBIRD_MODEL}_${HMBIRD_OS}.patch"
           if [ ! -f "$HMBIRD_PATCH" ] && [ "$FENGCHI_DIR" = "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/deprecated" ]; then
             echo "Deprecated HMBIRD patch is unavailable; falling back to the current patch set."
@@ -1762,11 +1756,8 @@ runs:
         NTSYNC_FOLDER="$KERNEL_PATCHES_FOLDER/common/ntsync"
         GKI_KEY="${ANDROID_VER}-${KERNEL_VER}"
         BRANCH_SUFFIX=$(basename "$OP_BRANCH")
-        NTSYNC_OS="${OP_OS_VERSION/OOS/A}"
-        if [ "$OP_OS_VERSION" = "COS17" ]; then
-          NTSYNC_OS="A16"
-        fi
-        
+        NTSYNC_OS="A16"
+
         NTSYNC_PATCH=""
         case "$OP_MODEL" in
           OP10r|OP-ACE-2-5.10.209|OP-ACE-2V-5.10.209|OP-PAD-MT6983-5.10.209|\
@@ -2231,24 +2222,13 @@ runs:
         MPMAP="-fmacro-prefix-map=${WORKSPACE}=."
         FPMAP="-ffile-prefix-map=${WORKSPACE}=."
         
-        # 
-        # add_kcflag() - append kcflags without failing build in case flag is not supported
-        # @args - flags to be appended
-        # 
-        # usage : 
-        #       add_kcflag flag1 flag2 ...
-        #
-        function add_kcflag() {                                    
-          if printf 'int g(int a){return a+1;} int f(int a){return g(a)*2;}\n' \
-            | clang --target=aarch64-linux-gnu -O2 "$@" -x c - -c -o /dev/null 2>/dev/null; then
-            KCFLAGS="${KCFLAGS:+$KCFLAGS }$*"
-          else
-            echo "::warning::clang rejected flag(s), skipping: $*"
-          fi
-        }
-
         if [[ "${{ inputs.mlgo }}" = "true" ]]; then
-          add_kcflag -mllvm -regalloc-enable-advisor=release
+          if printf 'int f(int a) { return a * 2; }\n' | clang --target=aarch64-linux-gnu -O2 \
+            -mllvm -regalloc-enable-advisor=release -x c - -c -o /dev/null; then
+            KCFLAGS="${KCFLAGS:-} -mllvm -regalloc-enable-advisor=release"
+          else
+            echo "::warning::This Clang does not support the MLGO register allocator"
+          fi
         fi
 
         export KCFLAGS="${KCFLAGS:-} $MAP $MPMAP $FPMAP -no-canonical-prefixes -fdiagnostics-color=never -Qunused-arguments -Wno-unused-command-line-argument -D__ANDROID_COMMON_KERNEL__"

@@ -5,20 +5,20 @@ import json
 from pathlib import Path
 import zipfile
 
+from build_target import validate as validate_target
+
 
 def validate(directory, expected):
     matrix = json.loads((directory / "matrix.json").read_text())
-    if expected < 1 or not isinstance(matrix, list) or len(matrix) != expected:
-        raise ValueError("Release matrix count does not match the expected device count")
+    if expected != 1 or not isinstance(matrix, list) or len(matrix) != 1:
+        raise ValueError("Expected exactly one OP13 ColorOS 17 release target")
+    target = validate_target(matrix[0])
     archives = sorted(directory.glob("AK3_*_USBWiFi.zip"))
-    if len(archives) != expected:
-        raise ValueError(f"Expected {expected} kernel ZIPs, found {len(archives)}")
-    prefixes = [f"AK3_{item['model']}_{item['os_version']}_" for item in matrix]
-    if len(set(prefixes)) != expected:
-        raise ValueError("Release matrix contains duplicate targets")
-    for prefix in prefixes:
-        if sum(path.name.startswith(prefix) for path in archives) != 1:
-            raise ValueError("Missing or duplicated release asset for " + prefix)
+    if len(archives) != 1:
+        raise ValueError(f"Expected one kernel ZIP, found {len(archives)}")
+    prefix = f"AK3_{target['model']}_{target['os_version']}_{target['android_version']}-{target['kernel_version']}."
+    if not archives[0].name.startswith(prefix):
+        raise ValueError("Release asset does not match " + prefix)
     for archive in archives:
         with zipfile.ZipFile(archive) as package:
             for name in ("Image", "anykernel.sh"):

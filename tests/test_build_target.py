@@ -13,61 +13,38 @@ SPEC.loader.exec_module(target)
 
 
 class BuildTargetTests(unittest.TestCase):
-    def test_repository_targets_are_explicit(self):
-        self.assertEqual(
-            sorted(str(p.relative_to(ROOT)) for p in (ROOT / "configs").rglob("*.json")),
-            sorted(target.config_path(t) for t in target.TARGETS),
-        )
-        self.assertEqual(
-            sorted(str(p.relative_to(ROOT)) for p in (ROOT / "manifests").rglob("*.xml")),
-            sorted(target.manifest_path(t) for t in target.TARGETS),
-        )
+    def test_repository_has_only_the_coloros17_target(self):
+        for directory, pattern, maintained in (("configs", "*.json", target.TARGET_CONFIG),
+                                              ("manifests", "*.xml", target.TARGET_MANIFEST)):
+            self.assertEqual([p.relative_to(ROOT).as_posix() for p in (ROOT / directory).rglob(pattern)], [maintained])
 
-    def test_cli_generates_each_maintained_build(self):
-        for name, os_version in [("oos16", "OOS16"), ("cos17", "COS17")]:
-            with self.subTest(target=name):
-                result = subprocess.run([sys.executable, SPEC.origin, "--root", str(ROOT),
-                                         "--target", name], check=True, capture_output=True, text=True)
-                matrix = json.loads(result.stdout)
-                self.assertEqual(len(matrix), 1)
-                self.assertEqual(target.validate(matrix[0], name), matrix[0])
-                self.assertEqual(matrix[0]["os_version"], os_version)
-                self.assertEqual(matrix[0]["uname"], "OP-BAKASU")
-        # Keep stable OOS16 as the CLI default.
-        result = subprocess.run([sys.executable, SPEC.origin, "--root", str(ROOT)],
-                                check=True, capture_output=True, text=True)
-        self.assertEqual(json.loads(result.stdout)[0]["os_version"], "OOS16")
+    def test_default_explicit_and_mirror_matrices_are_identical(self):
+        config = json.loads((ROOT / target.TARGET_CONFIG).read_text())
+        self.assertEqual(config["os_version"], "COS17")
+        self.assertEqual(config["uname"], "OP-BAKASU")
+        for args in ([], ["--target", "cos17"], ["--all"]):
+            result = subprocess.run([sys.executable, SPEC.origin, "--root", str(ROOT), *args],
+                                    check=True, capture_output=True, text=True)
+            self.assertEqual(json.loads(result.stdout), [config])
 
     def test_changed_targets_are_rejected(self):
-        for name, expected in target.TARGETS.items():
-            config = json.loads((ROOT / target.config_path(name)).read_text())
-            for key in expected:
-                with self.subTest(target=name, key=key), self.assertRaises(ValueError):
-                    target.validate(dict(config, **{key: "other"}), name)
-        with self.assertRaises(ValueError):
-            target.validate([])
+        for key in target.TARGET:
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                target.validate(dict(target.TARGET, **{key: "wrong"}))
 
-    def test_all_targets_use_distinct_system_labels(self):
-        result = subprocess.run([sys.executable, SPEC.origin, "--all", "--root", str(ROOT)],
-                                check=True, capture_output=True, text=True)
-        matrix = json.loads(result.stdout)
-        self.assertEqual([config["os_version"] for config in matrix], ["OOS16", "COS17"])
-        self.assertEqual(len({config["os_version"] for config in matrix}), len(matrix))
-
-    def test_unknown_target_is_rejected_before_reading_a_config(self):
-        result = subprocess.run([sys.executable, SPEC.origin, "--target", "cos18"],
-                                capture_output=True, text=True)
+    def test_cli_rejects_retired_system(self):
+        result = subprocess.run([sys.executable, SPEC.origin, "--target", "oos16"], capture_output=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(result.stdout)
 
     def test_action_validation_rejects_wrong_kernel_or_os(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.json"
-            path.write_text(json.dumps(dict(target.TARGETS["cos17"], manifest="wrong.xml")))
+            path.write_text(json.dumps(dict(target.TARGET, manifest="wrong.xml")))
             result = subprocess.run([sys.executable, SPEC.origin, "--config", str(path)],
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 1)
-            self.assertIn("Only OP13 OOS16 or COS17", result.stderr)
+            self.assertIn("Only OP13 COS17", result.stderr)
 
 
 if __name__ == "__main__":

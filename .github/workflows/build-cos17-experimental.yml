@@ -1,6 +1,11 @@
-name: Experimental ColorOS 17 Kernel Build
+name: OnePlus 13 ColorOS 17 Quick Build
 on:
   workflow_dispatch:
+    inputs:
+      make_release:
+        description: 'Publish a clean BakaSU build as a GitHub prerelease'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,12 +19,12 @@ jobs:
     uses: ./.github/workflows/build-kernel-release.yml
     with:
       os_target: cos17
-      make_release: false
+      make_release: ${{ inputs.make_release }}
       ksu_type: BakaSU
       ksu_branch_or_hash: main
       android15-6_6_susfs_branch_or_commit: ''
       optimize_level: O2
-      clean_build: false
+      clean_build: ${{ inputs.make_release }}
       debug: false
       mirror_toolchains: false
       build_timestamp: ''

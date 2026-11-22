@@ -65,7 +65,7 @@ int main(void) {
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run([sys.executable, str(SCRIPTS / 'builtin_wifi_module_compat.py'),
                                      '--source', directory, '--model', 'OP13T',
-                                     '--os-version', 'OOS16', '--kernel', '6.6.118'],
+                                     '--os-version', 'COS17', '--kernel', '6.6.118'],
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(list(Path(directory).iterdir()))

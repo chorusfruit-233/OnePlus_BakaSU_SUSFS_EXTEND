@@ -34,7 +34,10 @@ class HybridMountTests(unittest.TestCase):
                 if name == "hybridmount.h":
                     data = (nm.FLAGS_CONDITION + '\n#define FLAGS_ARG , int flags\n#endif\n').encode()
                 if name == "hybridmount.c":
-                    data = b'xattr_full_name(handler, name), buffer, size FLAGS_VAL)\n'
+                    data = (b'full_name, buffer, size FLAGS_VAL);\nfull_name, buffer, size);\n'
+                            b'return proxy->orig->get(proxy->orig, dentry, inode, name, buffer, size);\n')
+                if name == "Makefile":
+                    data = b'obj-m += hybridmount.o\nccflags-y += -std=gnu11\nccflags-y += -DHM_HAVE_VM_FLAGS_CLEAR\n'
                 member = tarfile.TarInfo('meta-hybrid_mount-pinned/module/vfs/src/' + name)
                 member.size = len(data)
                 tar.addfile(member, io.BytesIO(data))
@@ -104,6 +107,10 @@ class HybridMountTests(unittest.TestCase):
         header = (self.source / "fs/hybridmount/hybridmount.h").read_text()
         self.assertIn('#if 1', header)
         self.assertIn('#define HM_VFS_FLAGS_VAL , flags', header)
+        driver = (self.source / "fs/hybridmount/hybridmount.c").read_text()
+        self.assertIn("full_name, buffer, size, 0);", driver)
+        self.assertIn("return proxy->orig->get(proxy->orig, dentry, inode, name, buffer, size, 0);", driver)
+        self.assertIn("-DHM_HAVE_VM_FLAGS_CLEAR", (self.source / "fs/hybridmount/Makefile").read_text())
         manifest = json.loads((self.source / "hybridmount-support/manifest.json").read_text())
         self.assertTrue(manifest['xattr_api']['get'])
 

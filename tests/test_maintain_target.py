@@ -28,9 +28,7 @@ class MaintainTargetTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
-        targets = tuple(path for target in maintenance.TARGETS
-                        for path in (maintenance.target_config_path(target),
-                                     maintenance.target_manifest_path(target)))
+        targets = (maintenance.TARGET_CONFIG, maintenance.TARGET_MANIFEST)
         for relative in (*targets, '.github/opencode/guidelines.txt',
                          'scripts/maintain_target.py', 'scripts/build_target.py'):
             destination = self.root / relative
@@ -40,8 +38,8 @@ class MaintainTargetTests(unittest.TestCase):
         self.manifest_path = self.root / maintenance.TARGET_MANIFEST
         self.config = json.loads(self.config_path.read_text())
         self.manifest = self.manifest_path.read_text()
-        for relative in ('configs/oos16/OP-N6X.json', 'configs/a15/OP9.json',
-                         'manifests/oos16/oneplus_other.xml'):
+        for relative in ('configs/oos16/OP13.json', 'configs/a15/OP9.json',
+                         'manifests/oos16/oneplus_13_w.xml'):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text('upstream addition\n')
@@ -54,11 +52,11 @@ class MaintainTargetTests(unittest.TestCase):
         self.config_path.write_text(json.dumps(dict(self.config, uname='OP-RESUKISU')))
         maintenance.enforce(self.root)
         self.assertEqual(json.loads(self.config_path.read_text())['uname'], 'OP-BAKASU')
-        for directory, selector in (('configs', maintenance.target_config_path),
-                                    ('manifests', maintenance.target_manifest_path)):
+        for directory, maintained in (('configs', maintenance.TARGET_CONFIG),
+                                    ('manifests', maintenance.TARGET_MANIFEST)):
             self.assertEqual(sorted(str(p.relative_to(self.root))
                                     for p in (self.root / directory).rglob('*') if p.is_file()),
-                             sorted(selector(target) for target in maintenance.TARGETS))
+                             [maintained])
         self.assertTrue((self.root / '.github/opencode/guidelines.txt').is_file())
         before = self.snapshot()
         maintenance.enforce(self.root)
@@ -103,23 +101,14 @@ class MaintainTargetTests(unittest.TestCase):
         self.assertIn('https://github.com/Baka-SU/BakaSU', result.stdout)
         self.assertIn('OP-BAKASU', result.stdout)
         self.assertIn('Hybrid Mount VFS', result.stdout)
-        self.assertIn('configs/{oos16,cos17}/OP13.json', result.stdout)
-        self.assertIn('experimental COS17', result.stdout)
+        self.assertIn('configs/cos17/OP13.json', result.stdout)
+        self.assertNotIn('Preserve OOS Naming Convention', result.stdout)
         self.assertNotIn('ReSukiSU', result.stdout)
         self.assertNotIn('OP-RESUKISU', result.stdout)
         self.assertEqual((self.root / '.github/opencode/guidelines.txt').read_bytes(), original)
 
-    def test_invalid_cos17_does_not_modify_oos16_or_prune_other_files(self):
-        self.config_path.write_text(json.dumps(dict(self.config, uname='OP-RESUKISU')))
-        path = self.root / maintenance.target_config_path('cos17')
-        path.unlink()
-        before = self.snapshot()
-        with self.assertRaisesRegex(ValueError, 'Missing maintained target'):
-            maintenance.enforce(self.root)
-        self.assertEqual(self.snapshot(), before)
-
-    def test_wrong_cos17_label_is_rejected_even_when_oos16_is_valid(self):
-        path = self.root / maintenance.target_config_path('cos17')
+    def test_oos16_label_in_the_cos17_path_aborts_before_pruning(self):
+        path = self.config_path
         config = json.loads(path.read_text())
         path.write_text(json.dumps(dict(config, os_version='OOS16')))
         before = self.snapshot()

@@ -344,7 +344,7 @@ class DriverPlanner:
 def apply_plan(source, config, profile, plan_path, model='', version='', os_version=''):
     version = version or kernel_version(source)
     references = vendor_abi.selected_references(model, os_version, version)
-    if model == 'OP13' and os_version in ('OOS16', 'COS17') and not references:
+    if model == 'OP13' and os_version == 'COS17' and not references:
         raise ValueError(f'No matching factory wireless ABI reference for {model}/{os_version}/{version}')
     abi_config = {}
     for reference in references:

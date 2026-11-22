@@ -401,7 +401,7 @@ jobs:
       - name: Run opencode
         id: agent
         if: steps.merge-check.outputs.skip_agent != 'true'
-        uses: anomalyco/opencode/github@v1.19.5
+        uses: anomalyco/opencode/github@v1.19.6
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}

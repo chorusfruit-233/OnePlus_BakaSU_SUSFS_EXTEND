@@ -8,6 +8,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import validate_release_assets as assets
+from build_target import TARGET
 
 
 class ReleaseAssetsTests(unittest.TestCase):
@@ -16,8 +17,8 @@ class ReleaseAssetsTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.matrix = self.root / "matrix.json"
-        self.matrix.write_text(json.dumps([{"model": "OP13", "os_version": "OOS16"}]))
-        self.archive = self.root / "AK3_OP13_OOS16_android15-6.6.118_BakaSU_USBWiFi.zip"
+        self.matrix.write_text(json.dumps([TARGET]))
+        self.archive = self.root / "AK3_OP13_COS17_android15-6.6.118_BakaSU_USBWiFi.zip"
 
     def package(self, path=None):
         with zipfile.ZipFile(path or self.archive, "w") as output:
@@ -46,12 +47,12 @@ class ReleaseAssetsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assets.validate(self.root, 1)
         self.package()
-        self.package(self.root / "AK3_OP13_OOS16_other_USBWiFi.zip")
+        self.package(self.root / "AK3_OP13_COS17_other_USBWiFi.zip")
         with self.assertRaises(ValueError):
             assets.validate(self.root, 1)
 
     def test_wrong_target_is_rejected(self):
-        self.package(self.root / "AK3_OP12_OOS16_kernel_USBWiFi.zip")
+        self.package(self.root / "AK3_OP12_COS17_kernel_USBWiFi.zip")
         with self.assertRaises(ValueError):
             assets.validate(self.root, 1)
 
@@ -61,10 +62,10 @@ class ReleaseAssetsTests(unittest.TestCase):
             assets.validate(self.root, 1)
 
     def test_cos17_matrix_rejects_an_oos16_image_package(self):
-        self.matrix.write_text(json.dumps([{"model": "OP13", "os_version": "COS17"}]))
-        self.package()
-        with self.assertRaisesRegex(ValueError, "Missing or duplicated release asset"):
+        archive = self.archive.with_name(self.archive.name.replace("_COS17_", "_OOS16_"))
+        self.package(archive)
+        with self.assertRaisesRegex(ValueError, "does not match"):
             assets.validate(self.root, 1)
-        cos17 = self.archive.with_name(self.archive.name.replace("_OOS16_", "_COS17_"))
-        self.archive.rename(cos17)
-        self.assertEqual(assets.validate(self.root, 1), [cos17])
+        self.matrix.write_text(json.dumps([dict(TARGET, os_version="OOS16")]))
+        with self.assertRaisesRegex(ValueError, "Only OP13 COS17"):
+            assets.validate(self.root, 1)
