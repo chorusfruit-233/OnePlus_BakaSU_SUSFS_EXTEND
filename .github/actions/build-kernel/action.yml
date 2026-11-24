@@ -1550,7 +1550,7 @@ runs:
           fi
         done
 
-        ccache --set-config=extra_files_to_hash="$copied_modules"
+        echo "CCACHE_EXTRAFILES=$copied_modules" >> "$GITHUB_ENV"
         
         echo "Patching optimized_mem_operations.patch"
         if ! patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/optimized_mem_operations.patch"; then
