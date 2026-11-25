@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Check built cfg80211 symbol CRCs against a matching factory WLAN module."""
+"""Check built-in symbol CRCs against the matching factory module references."""
 import argparse
+from itertools import chain
 import json
 from pathlib import Path
 import re
@@ -15,7 +16,8 @@ def check(reference, symvers):
         if len(parts) >= 3:
             actual[parts[1]] = (int(parts[0], 16), parts[2])
     errors = []
-    for name, expected in reference['symbols'].items():
+    expected_groups = [reference['symbols'], *reference.get('module_imports', {}).values()]
+    for name, expected in chain.from_iterable(group.items() for group in expected_groups):
         entry = actual.get(name)
         if entry is None:
             errors.append(f'{name}: missing from {symvers.name}')
@@ -45,29 +47,36 @@ def main():
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
     selected = selected_references(args.model, args.os_version, args.kernel)
-    lines = ['Factory WLAN module ABI check', f'Model: {args.model}', f'Kernel: {args.kernel}']
+    lines = ['Factory module ABI check', f'Model: {args.model}', f'Kernel: {args.kernel}']
     failures = []
     if not selected:
         lines.append('ERROR: no matching factory wireless ABI reference; refusing to package.')
         failures.append('no factory wireless ABI reference for requested model, OS and kernel')
     for reference in selected:
         lines.append('Factory system: ' + reference['system'])
-        experimental = reference.get('factory_wlan_imports') == 'unverified'
-        if experimental:
+        if reference.get('factory_wlan_imports') == 'unverified':
             lines.append('Experimental reference: stock cfg80211 exports and rfkill imports; '
                          'Qualcomm WLAN module imports are not independently audited')
+        if 'factory_modules_audited' in reference:
+            lines.append(f"Reference audited against {reference['factory_modules_audited']} original modules")
         try:
             errors = check(reference, args.symvers)
         except (OSError, ValueError) as error:
             errors = [str(error)]
         failures.extend(errors)
-        scope = 'stock cfg80211/rfkill reference' if experimental else 'factory module requirements'
-        lines.extend(errors or [f"PASS: {len(reference['symbols'])} built-in wireless symbol CRCs match {scope}"])
+        if errors:
+            lines.extend(errors)
+            continue
+        lines.append(f"PASS: {len(reference['symbols'])} built-in wireless symbol CRCs match stock cfg80211/rfkill reference")
+        imports = reference.get('module_imports', {})
+        if imports:
+            count = sum(map(len, imports.values()))
+            lines.append(f"PASS: {count} built-in symbol CRCs match factory imports from {', '.join(sorted(imports))}")
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text('\n'.join(lines) + '\n')
     print('\n'.join(lines))
     if failures:
-        parser.exit(1, 'Factory WLAN ABI mismatch; refusing to package this kernel\n')
+        parser.exit(1, 'Factory module ABI mismatch; refusing to package this kernel\n')
 
 
 if __name__ == '__main__':

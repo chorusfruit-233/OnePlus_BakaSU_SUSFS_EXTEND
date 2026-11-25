@@ -1906,13 +1906,6 @@ runs:
         set -euo pipefail
         echo "Add IP SET & IPv6_NAT Support"
         cd "$COMMON_KERNEL_FOLDER"
-        KERNEL_VERSION="${{ env.KERNEL_VER }}"
-        
-        if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
-          echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
-        else
-          echo "CONFIG_BPF_STREAM_PARSER=y" >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
-        fi
         
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_IP_SET=y
@@ -2089,6 +2082,20 @@ runs:
         
         echo "✅ Droidspaces Support applied"
         echo "::endgroup::"
+
+    - name: Backport the OP13 ColorOS 17 zone watermark hook
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "$COMMON_KERNEL_FOLDER"
+        backport="$GITHUB_ACTION_PATH/assets/op13-cos17-zone-mark.patch"
+        patch_options=(--force --fuzz=0 -p1)
+        if patch "${patch_options[@]}" --reverse --dry-run < "$backport" >/dev/null 2>&1; then
+          echo "The zone watermark hook is already present"
+        else
+          patch "${patch_options[@]}" --dry-run < "$backport"
+          patch "${patch_options[@]}" < "$backport"
+        fi
 
     - name: Add Build based configs
       shell: bash
@@ -2301,6 +2308,9 @@ runs:
         echo "============================================"
         
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" gki_defconfig
+
+        # Preserve the struct sk_psock layout used by the factory Bluetooth and TLS modules.
+        scripts/config --file "$OUT/.config" --disable BPF_STREAM_PARSER
         
         LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--OP-BAKASU}"
         if [ -n "${LOCAL_LOCALVERSION:-}" ]; then

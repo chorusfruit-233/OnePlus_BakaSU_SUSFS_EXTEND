@@ -20,7 +20,7 @@ body:
     id: system_build
     attributes:
       label: Full ColorOS build
-      placeholder: "PJZ110_17.0.0.103(CN01)"
+      placeholder: "PJZ110_17.0.1.202(CN01)"
     validations:
       required: true
 

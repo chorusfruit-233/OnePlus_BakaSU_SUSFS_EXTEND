@@ -2,14 +2,14 @@
   "model": "OP13",
   "os_version": "COS17",
   "kernel": "6.6.118",
-  "system": "PJZ110_17.0.0.103(CN01)",
-  "source": "ColorOS17 vendor_boot_b.img cfg80211.ko: 43 cfg80211 CRC exports and 7 rfkill imports match prior OOS16 reference; Qualcomm WLAN module not yet independently audited",
+  "system": "PJZ110_17.0.1.202(CN01)",
+  "source": "PJZ110_17.0.1.202(CN01) full OTA: vendor_boot, vendor_dlkm and system_dlkm, matched to the supplied boot image by SHA-256",
   "config": {
     "CFG80211_WEXT": "n",
     "CFG80211_WEXT_EXPORT": "n",
     "NL80211_TESTMODE": "y"
   },
-  "cfg80211_sha256": "6896d8c806e5eeb9281f7156f591ad00b8ac16cfd11121387da03aeac8a97132",
+  "cfg80211_sha256": "aeab36e34c7cb831086c72d93fa52c5480bf9f649015bdc07be9fa0befd485b0",
   "symbols": {
     "wiphy_new_nm": "0x8137a428",
     "wiphy_register": "0x73c9f04c",
@@ -63,5 +63,37 @@
     "rfkill_blocked": "0xc0763484"
   },
   "builtin_module_compat": true,
-  "factory_wlan_imports": "unverified"
+  "factory_wlan_imports": "audited",
+  "rfkill_sha256": "9ddca7b8d49fa42578eaf040cd11a3e6a9afe4402dcbe1c4394befe28b2c19cf",
+  "factory_boot_sha256": "18ee822edec1d76ee40cec8c54906c40c64f5925a14a426a3fb4b1dc26abe8f9",
+  "factory_module_partitions": {
+    "vendor_boot": "a677f0df854f3dcff37c1930659ed663dd08d67cce6a379955de6ef6d0bea87a",
+    "vendor_dlkm": "b24fdc3053f947166dd12e5c1e0f310bfe8cd18de4bb95a01936e25e8337ebc0",
+    "system_dlkm": "9c78d6aabeaba75a4195fc92a39d09a7f718181e8a729d2b5775fd548db9bf44"
+  },
+  "factory_modules_audited": 712,
+  "module_imports": {
+    "bluetooth": {
+      "sk_filter_trim_cap": "0x553e24af"
+    },
+    "oplus_bsp_zram_opt": {
+      "__tracepoint_android_vh_mm_get_zone_mark": "0xb74f2db0"
+    },
+    "tls": {
+      "sk_msg_alloc": "0xdf8557f3",
+      "sk_msg_clone": "0xae7a4059",
+      "sk_msg_free": "0xfe546b71",
+      "sk_msg_free_nocharge": "0x7f6baa41",
+      "sk_msg_free_partial": "0x61abfbd2",
+      "sk_msg_memcopy_from_iter": "0x6ef5aee5",
+      "sk_msg_recvmsg": "0x2c39fbe5",
+      "sk_msg_return_zero": "0x7064b92c",
+      "sk_msg_trim": "0x1c9a5038",
+      "sk_msg_zerocopy_from_iter": "0x104b7efc",
+      "sk_psock_drop": "0x2c1209a8",
+      "sk_psock_msg_verdict": "0xdc93008c",
+      "sk_psock_tls_strp_read": "0xbceecf7a",
+      "tcp_bpf_sendmsg_redir": "0x2a7744d0"
+    }
+  }
 }

@@ -1,14 +1,19 @@
 # 一加 13 ColorOS 17
 
-`main` 只维护 `PJZ110_17.0.0.103(CN01)` / Linux 6.6.118。默认构建、工具链镜像、自动上游同步和 Release 均使用 `configs/cos17/OP13.json` 与 `manifests/cos17/oneplus_13_w.xml`。
+`main` 只维护 `PJZ110_17.0.1.202(CN01)` / Linux 6.6.118。默认构建、工具链镜像、自动上游同步和 Release 均使用 `configs/cos17/OP13.json` 与 `manifests/cos17/oneplus_13_w.xml`。
 
 在 GitHub Actions 运行 **OnePlus 13 ColorOS 17 Quick Build** 可生成 BakaSU 刷机包。勾选 `make_release` 会使用干净构建并发布公开的 GitHub 预发布版。通过 **Build OnePlus 13 ColorOS 17 (Built-in USB WiFi)** 可选择 KernelSU、指定 BakaSU/SUSFS 提交或调整编译选项。
 
-## 源码与无线 ABI
+## 源码与原厂模块 ABI
 
-截至 2026-11-22，OnePlusOSS 的 OP13 SM8750 common、vendor kernel、modules/device-tree 和 manifest 仍未公开单独的 C17 基线。本项目沿用其 `oneplus/sm8750_b_16.0.0_oneplus_13` 源码。HMBIRD 与 NTSync 采用这份源码对应的 A16 补丁。
+构建沿用 OnePlusOSS 的 `oneplus/sm8750_b_16.0.0_oneplus_13` 公开源码。HMBIRD 与 NTSync 采用这份源码对应的 A16 补丁。原厂内核为 `6.6.118-android15-8-gb1422e39c313-abogki552867473-4k`。
 
-`profiles/vendor-wifi-abi/op13-cos17-6.6.118.json` 来自该 C17 版本的 `vendor_boot_b.img`。原厂 `cfg80211.ko` 的 SHA-256 为 `6896d8c806e5eeb9281f7156f591ad00b8ac16cfd11121387da03aeac8a97132`。打包检查 43 个 cfg80211 导出和 7 个 rfkill 导入的 CRC。高通 WLAN 模块完整导入尚待独立审计，报告保留 `factory_wlan_imports: unverified`。
+从 `PJZ110_17.0.1.202(CN01)` 全量 OTA（`PJZ110_11.F.10_2100_202611130306`）提取 `vendor_boot`、`vendor_dlkm` 和 `system_dlkm`。以 OTA manifest 的 SHA-256 核对分区，并确认其 `boot` 与已提供的原厂镜像完全一致。分区、`cfg80211.ko` 和 `rfkill.ko` 的哈希记录在 `profiles/vendor-wifi-abi/op13-cos17-6.6.118.json`。[全量 OTA 索引](https://fwatlas.com/oneplus/oneplus-13/pjz110-17-0-1-202-cn01-pjz110-11-f-10-2100-202611130306)
+
+- 核对了 712 份去重后的原厂模块的版本化导入。三款高通 WLAN 驱动（kiwi v2、peach、peach v2）各有 43 项内建无线依赖，全部匹配。
+- 按原厂关闭 `CONFIG_BPF_STREAM_PARSER`，恢复 `bluetooth.ko` 和 `tls.ko` 使用的 15 项 CRC。
+- 回移 Android 公共内核的 `android_vh_mm_get_zone_mark`，在 `pgdat_balanced()` 的水位检查前调用，供 `oplus_bsp_zram_opt.ko` 使用。[Android 公共内核源码](https://android.googlesource.com/kernel/common/+/329f9ae918a9e18da3c488e531adf9b7995e2aae/mm/vmscan.c)
+- 编译后核对上述 16 项和 50 项无线 CRC。所有符号都必须是内建内核导出，校验通过后才能打包。
 
 ## 刷机包与验证
 

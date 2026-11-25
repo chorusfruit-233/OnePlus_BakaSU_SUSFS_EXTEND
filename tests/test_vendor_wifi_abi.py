@@ -49,11 +49,19 @@ class VendorAbiTests(unittest.TestCase):
         self.assertIn('refusing to package', result.stderr)
         self.assertIn('wiphy_register: missing', report.read_text())
 
-    def test_factory_reference_matches_all_50_builtin_exports(self):
+    def test_required_factory_module_symbols_are_checked(self):
         reference = json.loads((abi.REFERENCES / 'op13-cos17-6.6.118.json').read_text())
         self.assertEqual(len(reference['symbols']), 50)
+        self.assertEqual(sum(map(len, reference['module_imports'].values())), 16)
         self.symvers.write_text(''.join(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n'
                                        for name, crc in reference['symbols'].items()))
+        errors = abi.check(reference, self.symvers)
+        self.assertEqual(len(errors), 16)
+        self.assertIn('__tracepoint_android_vh_mm_get_zone_mark: missing', '\n'.join(errors))
+        with self.symvers.open('a') as table:
+            for imports in reference['module_imports'].values():
+                for name, crc in imports.items():
+                    table.write(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n')
         self.assertEqual(abi.check(reference, self.symvers), [])
 
     def test_missing_reference_refuses_packaging_instead_of_using_another_os(self):
@@ -68,17 +76,17 @@ class VendorAbiTests(unittest.TestCase):
                 self.assertIn('no matching factory wireless ABI reference', report.read_text())
                 self.assertNotIn('PASS:', result.stdout)
 
-    def test_cos17_crc_report_keeps_the_experimental_reference_scope(self):
+    def test_cos17_crc_report_records_the_updated_factory_reference(self):
         reference = abi.selected_references('OP13', 'COS17', '6.6.118')[0]
-        self.assertEqual(reference['factory_wlan_imports'], 'unverified')
+        groups = [reference['symbols'], *reference['module_imports'].values()]
         self.symvers.write_text(''.join(f'{crc}\t{name}\tvmlinux\tEXPORT_SYMBOL\n'
-                                       for name, crc in reference['symbols'].items()))
+                                       for group in groups for name, crc in group.items()))
         report = Path(self.temp.name) / 'cos17-abi.txt'
         result = subprocess.run([sys.executable, SPEC.origin, '--model', 'OP13',
                                  '--os-version', 'COS17', '--kernel', '6.6.118',
                                  '--symvers', str(self.symvers), '--report', str(report)],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('PJZ110_17.0.1.202(CN01)', report.read_text())
         self.assertIn('PASS: 50', result.stdout)
-        self.assertIn('not independently audited', result.stdout)
-        self.assertNotIn('match factory module requirements', result.stdout)
+        self.assertIn('PASS: 16 built-in symbol CRCs match factory imports from bluetooth, oplus_bsp_zram_opt, tls', result.stdout)

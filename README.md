@@ -1,12 +1,12 @@
 # OnePlus 13 ColorOS 17 内核（USB WiFi / Hybrid Mount VFS 内建）
 
-主分支 `main` 只构建一加 13（PJZ110）的 **ColorOS 17.0.0.103(CN01) / Linux 6.6.118**。目标配置为 `configs/cos17/OP13.json`，manifest 为 `manifests/cos17/oneplus_13_w.xml`。目前沿用 OnePlusOSS 公开的 `oneplus/sm8750_b_16.0.0_oneplus_13` 源码基线（GKI android15-6.6）。
+主分支 `main` 只构建一加 13（PJZ110）的 **ColorOS 17.0.1.202(CN01) / Linux 6.6.118**。目标配置为 `configs/cos17/OP13.json`，manifest 为 `manifests/cos17/oneplus_13_w.xml`。目前沿用 OnePlusOSS 公开的 `oneplus/sm8750_b_16.0.0_oneplus_13` 源码基线（GKI android15-6.6）。
 
 - 在 Actions 运行 **OnePlus 13 ColorOS 17 Quick Build** 即可生成 BakaSU 刷机包。勾选 `make_release` 会完整编译并发布预发布版。**Build OnePlus 13 ColorOS 17 (Built-in USB WiFi)** 提供 KernelSU、依赖提交和编译选项。
-- C17 无线 ABI 参考来自该版本的原厂 `vendor_boot_b.img`，覆盖 43 个 `cfg80211` 导出和 7 个 `rfkill` 导入。高通 WLAN 模块完整导入、C17 真机启动与板载 WiFi 仍待验证。详见 [ColorOS 17 适配](docs/cos17.md)。
+- 原厂 ABI 参考来自该版本全量 OTA 的 `vendor_boot`、`vendor_dlkm` 和 `system_dlkm`。已核对 712 个原厂模块，三款高通 WLAN 驱动的符号导入通过静态检查。C17 真机启动与板载 Wi-Fi 仍待验证。详见 [ColorOS 17 适配](docs/cos17.md)。
 - `profiles/usb-wifi.json` 维护 USB 网卡候选。构建使用该机型的完整 Kconfig 解析菜单、依赖和版本差异，逐个尝试内建；对厂商缺少结束引号的 `source` 行采用原生 Linux 的行尾终止规则，保持源码原样，并把兼容处理记录在覆盖报告中；源码没有的驱动、无法满足的依赖都会保留具体原因，不让单个不可用候选阻断其他可用驱动。未在该机型内核树中出现的驱动仍需后续回移。
 - 保留原配置中的 `CFG80211_WEXT`、`CFG80211_WEXT_EXPORT` 和 `NL80211_TESTMODE`，避免 USB 候选改变板载 WiFi 模块依赖的结构布局。会改变这些配置的驱动或可选辅助项自动回退并记录原因，`olddefconfig` 后和编译完成后再次检查。例如原厂关闭 WEXT 时跳过 `ORINOCO_USB`；原配置已兼容时仍可内建。
-- 按原厂参考启用 `NL80211_TESTMODE=y`、关闭 WEXT。打包前检查 50 个内建无线符号的 CRC，结果保存在 `usb-wifi/vendor-abi.txt`。内建的 `cfg80211` 和 `rfkill` 收到厂商重复加载请求时返回“已加载”。
+- 按原厂参考启用 `NL80211_TESTMODE=y`、关闭 WEXT。打包前检查 50 项无线 CRC，以及蓝牙、TLS 和原厂 zram 模块依赖的 16 项 CRC。结果保存在 `usb-wifi/vendor-abi.txt`。内建的 `cfg80211` 和 `rfkill` 收到厂商重复加载请求时返回“已加载”。
 - 固件只针对最终启用的驱动准备，从固定版本的 `linux-firmware` 和 ZD1211 官方固件包下载，记录来源、校验值和许可证。固件放入构建目录并通过内核的 [内建固件机制](https://docs.kernel.org/driver-api/firmware/built-in-fw.html) 写入 `CONFIG_EXTRA_FIRMWARE` / `CONFIG_EXTRA_FIRMWARE_DIR`；已覆盖的固件无需额外安装。
 - `cfg80211` 需要外部监管数据库时同时内建 `regulatory.db`，启用签名验证时选择与该内核实际信任证书匹配的官方 `wireless-regdb` 版本和签名。没有匹配的已固定版本会列为缺失。下载采用有限重试与校验后的对象缓存，减少批量构建的重复下载。
 - 个别固件缺失时会明确标记覆盖不完整，相关芯片仍可能需要设备已有固件。驱动经过 `olddefconfig` 后按实际 `=y` 的结果准备固件；下载或校验失败、没有任何可内建驱动、后续配置使已确认内建的驱动降为 `m/n`，或内建固件配置丢失都会停止构建。Image 编译完成后再次验证最终配置，并逐个检查固件原始字节和精确请求名称确实存在于本次编译的 Image 中；刷机包只使用这一已验证产物。
@@ -79,7 +79,7 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 
 | 机型 | 系统 | Manifest | 配置 |
 |------|------|----------|------|
-| OnePlus 13 | ColorOS 17.0.0.103(CN01) | `cos17/oneplus_13_w.xml` | `configs/cos17/OP13.json` |
+| OnePlus 13 | ColorOS 17.0.1.202(CN01) | `cos17/oneplus_13_w.xml` | `configs/cos17/OP13.json` |
 
 ## 🔗 Additional Resources
 
@@ -90,7 +90,7 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 
 ## 兼容性
 
-适配范围为 `PJZ110_17.0.0.103(CN01)` / 6.6.118。详见 [兼容性说明](compatibility.md)。
+适配范围为 `PJZ110_17.0.1.202(CN01)` / 6.6.118。详见 [兼容性说明](compatibility.md)。
 
 ---
 

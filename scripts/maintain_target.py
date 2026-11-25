@@ -11,7 +11,7 @@ UNAME = 'OP-BAKASU'
 CONSTRAINTS = '''
 Current maintained build requirements (supersede legacy target descriptions):
 - Maintain only OnePlus 13 / COS17 / android15-6.6 in configs/cos17/OP13.json and manifests/cos17/oneplus_13_w.xml.
-- Use the PJZ110_17.0.0.103(CN01) wireless ABI reference and the public 6.6.118 source baseline.
+- Use the PJZ110_17.0.1.202(CN01) wireless ABI reference and the public 6.6.118 source baseline.
 - Keep uname OP-BAKASU and official Baka-SU/BakaSU integration; KernelSU remains an optional build choice.
 - Preserve built-in USB WiFi drivers and firmware, vendor WiFi ABI checks, USB DWC3/OTG support, and USBWiFi artifact names.
 - Preserve built-in Hybrid Mount VFS, its pinned source/checksum and verification; do not restore NoMount.

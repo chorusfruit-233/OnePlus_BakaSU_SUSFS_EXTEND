@@ -896,13 +896,13 @@ jobs:
           if [[ "$ROOT_TYPE" == KSU ]]; then root_repo=tiann/KernelSU; fi
           download="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag/$filename"
           cat > release_notes.md <<EOF
-          适用于一加 13（PJZ110）的 ColorOS 17.0.0.103(CN01)，内核为 android15-6.6.118。使用 OnePlusOSS 公开的 OP13 源码基线。C17 真机启动、板载 WiFi 和 USB 网卡仍待验证。
+          适用于一加 13（PJZ110）的 ColorOS 17.0.1.202(CN01)，内核为 android15-6.6.118。使用 OnePlusOSS 公开的 OP13 源码基线。C17 真机启动、板载 WiFi 和 USB 网卡仍待验证。
 
           | 机型 / 刷机包 | 系统 | Root | SUSFS |
           | --- | --- | --- | --- |
           | [OnePlus 13]($download) | ColorOS 17 | $ROOT_TYPE $root_version | $SUSFS_BASE_VERSION |
 
-          构建检查覆盖内建 USB WiFi 驱动、Image 中的固件、50 项原厂 cfg80211/rfkill 符号 CRC 和 Hybrid Mount VFS 链接。ZIP 内附详细报告。
+          构建检查覆盖内建 USB Wi-Fi 驱动、Image 中的固件、66 项原厂模块 ABI CRC 和 Hybrid Mount VFS 链接。ZIP 内附详细报告。
 
           | 构建来源 | 版本 |
           | --- | --- |
